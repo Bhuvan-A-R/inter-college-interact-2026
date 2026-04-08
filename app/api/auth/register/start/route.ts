@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: { message: "OTP sent to your email." },
+      data: { message: "OTP has been generated and sent to the email." },
     });
   } catch (error) {
     console.error("[auth/register/send-otp]", error);

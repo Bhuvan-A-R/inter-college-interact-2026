@@ -1,66 +1,61 @@
-// 1. Change the import from Type to EventType
-import { EventType as Type } from "@prisma/client";
 import prisma from "@/lib/db";
+import { DataTable, Data } from "@/components/register/admin-table";
+import { verifySession } from "@/lib/session";
+import { redirect } from "next/navigation";
 
-// Add this back for the 'docStatusMap' error
-export const docStatusMap = {
-  PENDING: "Pending",
-  PROCESSING: "Processing",
-  APPROVED: "Success",
-  REJECTED: "Failed",
-} as const;
-// ... other imports
+export default async function Page() {
+  const session = await verifySession();
+  if (!session || (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN")) {
+    redirect("/auth/signin");
+  }
 
-interface AggregatedRow {
-  registrantId: string;
-  name: string;
-  usn: string;
-  collegeName: string;
-  photoUrl: string;
-  docStatus: keyof typeof docStatusMap;
-  gender: string;
-  phone: string;
-  email: string;
-  blood: string;
-  collegeCode: string;
-  registrations: Array<{
-    type: Type | null; // This now correctly uses EventType
-    eventName: string | null;
-    deptCode?: string | null;
-    teamNumber?: number | null;
-  }>;
+  const users = await prisma.user.findMany({
+    include: {
+      registrations: {
+        include: {
+          event: {
+            select: { id: true, name: true, type: true, category: true },
+          },
+        },
+      },
+    },
+    orderBy: [{ usn: "asc" }, { name: "asc" }],
+  });
+
+  const results: Data[] = users.map((user) => {
+    const events = user.registrations.map((r) => ({
+      eventName: r.event.name,
+      role: "Participant" as const,
+    }));
+
+    return {
+      id: user.id,
+      name: user.name,
+      usn: user.usn ?? "",
+      collegeName: user.collegeName,
+      photo: user.photoUrl ?? "",
+      email: user.email,
+      phone: user.phone,
+      // Fields removed from schema — passed as empty strings for table compatibility
+      collegeCode: "",
+      gender: "",
+      blood: "",
+      type: events.length > 0 ? "Participant" : "",
+      events,
+      status: "Pending" as const,
+    };
+  });
+
+  return (
+    <div className="bg-background min-h-screen pt-10">
+      <div className="mt-4 justify-center flex flex-col gap-4">
+        <div className="max-w-4xl mx-auto p-4">
+          <h1 className="text-primary font-bold text-5xl md:text-5xl xl:text-5xl mb-6">
+            Admin Dashboard
+          </h1>
+        </div>
+      </div>
+      <DataTable data={results} />
+    </div>
+  );
 }
-
-// 2. Fix your $queryRaw to use the correct table names (User, Event, Registration)
-const aggregatedData: AggregatedRow[] = await prisma.$queryRaw`
-    SELECT
-      r.id AS "registrantId",
-      r.name,
-      r.usn,
-      r."photoUrl",
-      r.email,
-      r.gender,
-      r.blood,
-      r."docStatus", -- Ensure this field exists in your User model
-      r.phone,
-      u."collegeName" AS "collegeName",
-      u."collegeCode" AS "collegeCode",
-      COALESCE(
-        json_agg(
-          json_build_object(
-            'type', er.type,
-            'eventName', e."name",
-            'deptCode', e."deptCode", -- Verify if deptCode exists in Event model
-            'teamNumber', e."teamNumber" -- Verify if teamNumber exists in Event model
-          )
-        )
-        FILTER (WHERE er.id IS NOT NULL),
-        '[]'
-      ) AS "registrations"
-    FROM "User" r
-    LEFT JOIN "User" u ON r.id = u.id -- Adjust join logic if necessary
-    LEFT JOIN "Registration" er ON r.id = er."userId"
-    LEFT JOIN "Event" e ON er."eventId" = e.id
-    GROUP BY r.id, u."collegeName", u."collegeCode"
-    ORDER BY r.usn
-  `;

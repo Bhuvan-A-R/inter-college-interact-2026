@@ -4,8 +4,10 @@ import { ZodSchema, ZodError } from "zod";
 
 // ── Standard Response Builders ──────────────────────────────────────────────
 
-export function successResponse(data: unknown, status = 200) {
-  return NextResponse.json({ success: true, data }, { status });
+export function successResponse(data: any, status = 200, message?: string) {
+  const result: any = { ...data };
+  if (message) result.message = message;
+  return NextResponse.json({ success: true, data: result }, { status });
 }
 
 export function errorResponse(

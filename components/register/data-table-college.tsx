@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/table";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { getImageUrl } from "@/lib/utils";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 
@@ -178,7 +179,7 @@ export function DataTable({ data }: { data: Data[] }) {
         },
         cell: ({ row }) => {
           const imageKey = row.getValue("paymentUrl");
-          const imageUrl = `https://${process.env.NEXT_PUBLIC_UPLOADTHING_APP_ID}.ufs.sh/f/${imageKey}`;
+          const imageUrl = getImageUrl(imageKey as string);
           return (
             <>
               {imageKey ? (

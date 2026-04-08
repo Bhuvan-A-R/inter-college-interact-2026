@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/table";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { getImageUrl } from "@/lib/utils";
 
 // Define the type for a payment screenshot record
 export type PaymentScreenshotData = {
@@ -63,7 +64,7 @@ export function PaymentScreenshotTable({
         cell: ({ row }) => {
           // Create an image URL based on your upload service
           const paymentUrl = row.getValue("paymentUrl") as string;
-          const imageUrl = `https://${process.env.NEXT_PUBLIC_UPLOADTHING_APP_ID}.ufs.sh/f/${paymentUrl}`;
+          const imageUrl = getImageUrl(paymentUrl);
           return (
             <Image
               src={imageUrl}

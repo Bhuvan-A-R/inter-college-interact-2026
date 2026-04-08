@@ -51,6 +51,7 @@ import {
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Image from "next/image";
+import { getImageUrl } from "@/lib/utils";
 
 export type Data = {
   id: string;
@@ -949,7 +950,7 @@ export function DataTable({ data }: { data: Data[] }) {
         header: "Photo",
         cell: ({ row }) => {
           const photoUrl = row.getValue("photo") as string;
-          const imageUrl = `https://${process.env.NEXT_PUBLIC_UPLOADTHING_APP_ID}.ufs.sh/f/${photoUrl}`;
+          const imageUrl = getImageUrl(photoUrl);
           return (
             <Image
               src={imageUrl}

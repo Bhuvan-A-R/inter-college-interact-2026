@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: { message: "Email verified successfully. Please complete your registration." },
+      data: { message: "Email verified successfully." },
     });
   } catch (error) {
     console.error("[auth/register/verify-otp]", error);

@@ -1,6 +1,5 @@
 import prisma from "@/lib/db";
 import { Data } from "@/components/register/registrations-view-table";
-import { Type } from "@prisma/client";
 import { verifySession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { DataTable } from "@/components/register/registrations-view-table";
@@ -14,37 +13,9 @@ export const docStatusMap = {
   REJECTED: "Failed",
 } as const;
 
-interface AggregatedRow {
-  registrantId: string;
-  name: string;
-  usn: string;
-  collegeName: string;
-  photoUrl: string;
-  email: string;
-  phone: string;
-  collegeRegion: string;
-  collegeCode: string;
-  idcardUrl: string;
-  dateOfBirth: string;
-  gender: string;
-  docStatus: keyof typeof docStatusMap;
-  registrations: Array<{
-    type: Type | null;
-    eventName: string | null;
-    deptCode?: string | null;
-    teamNumber?: number | null;
-  }>;
-}
-
 const formatEventLabel = (
   eventName: string,
-  deptCode?: string | null,
-  teamNumber?: number | null,
-) => {
-  const dept = deptCode ? ` ${deptCode}` : "";
-  const team = teamNumber ? ` Team ${teamNumber}` : "";
-  return `${eventName}${dept}${team}`.trim();
-};
+) => eventName.trim();
 
 export default async function Page() {
   const session = await verifySession();
@@ -52,98 +23,70 @@ export default async function Page() {
     redirect("/auth/signin");
   }
 
-  // Single query with JSON aggregation + user filtering
-  const aggregatedData: AggregatedRow[] = await prisma.$queryRaw`
-    SELECT
-      r.id AS "registrantId",
-      r.name,
-      r.usn,
-      r."photoUrl",
-      r."docStatus",
-      u."collegeName" AS "collegeName",
-      u."region" AS "collegeRegion",
-      u."collegeCode" AS "collegeCode",
-      r."email" AS "email",
-      r."phone" AS "phone",
-      r."idcardUrl" AS "idcardUrl", 
-      r.gender,
-      r."blood" AS "dateOfBirth",
-      COALESCE(
-        json_agg(
-          json_build_object(
-            'type', er.type,
-            'eventName', e."eventName",
-            'deptCode', e."deptCode",
-            'teamNumber', e."teamNumber"
-          )
-        )
-        FILTER (WHERE er.id IS NOT NULL),
-        '[]'
-      ) AS "registrations"
-    FROM "Registrants" r
-    LEFT JOIN "Users" u ON r."userId" = u.id
-    LEFT JOIN "EventRegistrations" er ON r.id = er."registrantId"
-    LEFT JOIN "Events" e ON er."eventId" = e.id
-    GROUP BY r.id, u."collegeName" , u."region" , u."collegeCode" 
-    ORDER BY r.usn
-  `;
-  console.log(aggregatedData);
+  const users = await prisma.user.findMany({
+    include: {
+      registrations: {
+        include: {
+          event: {
+            select: { id: true, name: true, type: true, category: true },
+          },
+        },
+      },
+    },
+    orderBy: [{ usn: "asc" }, { name: "asc" }],
+  });
 
   // Build final rows for table
   const results: Data[] = [];
 
-  for (const row of aggregatedData) {
-    const hasEvents = row.registrations && row.registrations.length > 0;
-    // Gather participant events
-    const participantEvents = row.registrations
-      .filter((r) => r.type === "PARTICIPANT" && r.eventName)
-      .map((r) => ({
-        eventName: formatEventLabel(r.eventName!, r.deptCode, r.teamNumber),
-        role: "Participant" as const,
-      }));
+  for (const user of users) {
+    const hasEvents = user.registrations.length > 0;
+
+    const participantEvents = user.registrations.map((r) => ({
+      eventName: formatEventLabel(r.event.name),
+      role: "Participant" as const,
+    }));
+
     const typeLabel = participantEvents.length > 0 ? "Participant" : "";
 
-    // If no events or type not determined, push a blank record
     if (!hasEvents || typeLabel === "") {
       results.push({
-        id: row.registrantId,
-        name: row.name,
-        usn: row.usn,
-        collegeName: row.collegeName,
-        photo: row.photoUrl,
-        email: row.email,
-        phone: row.phone,
-        collegeRegion: row.collegeRegion,
-        collegeCode: row.collegeCode,
-        gender: row.gender,
-        idcardUrl: row.idcardUrl,
-        dateOfBirth: row.dateOfBirth,
+        id: user.id,
+        name: user.name,
+        usn: user.usn ?? "",
+        collegeName: user.collegeName,
+        photo: user.photoUrl ?? "",
+        email: user.email,
+        phone: user.phone,
+        // Fields removed from schema — passed as empty strings for table compatibility
+        collegeRegion: "",
+        collegeCode: "",
+        gender: "",
+        idcardUrl: user.collegeIdCardUrl ?? "",
+        dateOfBirth: "",
         type: "",
         events: [],
-        status: docStatusMap[row.docStatus],
+        status: "Pending",
       });
       continue;
     }
 
-    // Combine events with role information
-    const combinedEvents = participantEvents;
-
     results.push({
-      id: `${row.registrantId}#${typeLabel.toUpperCase()}`,
-      name: row.name,
-      usn: row.usn,
-      collegeName: row.collegeName,
-      photo: row.photoUrl,
+      id: `${user.id}#PARTICIPANT`,
+      name: user.name,
+      usn: user.usn ?? "",
+      collegeName: user.collegeName,
+      photo: user.photoUrl ?? "",
+      email: user.email,
+      phone: user.phone,
+      collegeRegion: "",
+      collegeCode: "",
+      gender: "",
+      idcardUrl: user.collegeIdCardUrl ?? "",
+      dateOfBirth: "",
       type: typeLabel,
-      email: row.email,
-      phone: row.phone,
-      collegeRegion: row.collegeRegion,
-      collegeCode: row.collegeCode,
-      gender: row.gender,
-      idcardUrl: row.idcardUrl,
-      dateOfBirth: row.dateOfBirth,
-      events: combinedEvents,
-      status: docStatusMap[row.docStatus],
+      events: participantEvents,
+      status: "Pending",
     });
   }
 

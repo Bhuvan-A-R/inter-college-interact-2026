@@ -54,6 +54,7 @@ import {
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Image from "next/image";
+import { getImageUrl } from "@/lib/utils";
 import Link from "next/link";
 import {
   Select,
@@ -136,7 +137,7 @@ export function DataTable({ data }: { data: Data[] }) {
         header: "Photo",
         cell: ({ row }) => {
           const photoUrl = row.getValue("photo");
-          const imageUrl = `https://${process.env.NEXT_PUBLIC_UPLOADTHING_APP_ID}.ufs.sh/f/${photoUrl}`;
+          const imageUrl = getImageUrl(photoUrl as string);
           return (
             <Image
               src={imageUrl}
@@ -349,7 +350,7 @@ export function DataTable({ data }: { data: Data[] }) {
         header: "ID Card",
         cell: ({ row }) => {
           const imageKey = row.getValue("idcardUrl");
-          const imageUrl = `https://${process.env.NEXT_PUBLIC_UPLOADTHING_APP_ID}.ufs.sh/f/${imageKey}`;
+          const imageUrl = getImageUrl(imageKey as string);
           return (
             <Link href={imageUrl} target="_blank">
               <Button>IDCARD</Button>

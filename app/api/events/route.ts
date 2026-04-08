@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    return successResponse({ events });
+    return successResponse({ items: events }, 200, "Events retrieved successfully.");
   } catch (error) {
     console.error("[GET /api/events]", error);
     return errorResponse("Internal server error.", 500);

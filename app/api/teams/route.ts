@@ -47,7 +47,7 @@ export async function GET() {
       myRole: m.role,
     }));
 
-    return successResponse({ teams });
+    return successResponse({ items: teams }, 200, "Teams retrieved successfully.");
   } catch (error) {
     console.error("[GET /api/teams]", error);
     return errorResponse("Internal server error.", 500);

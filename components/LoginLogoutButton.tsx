@@ -8,7 +8,8 @@ import { useAuthContext } from "@/contexts/auth-context";
 // ─── All auth logic below is intentionally untouched ─────────────────────────
 
 const LoginLogoutButton = () => {
-  const { isLoggedIn, setIsLoggedIn } = useAuthContext();
+  const { isLoggedIn, role, setIsLoggedIn } = useAuthContext();
+  const isAdmin = role === "SUPER_ADMIN" || role === "ADMIN";
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -45,21 +46,33 @@ const LoginLogoutButton = () => {
     <div className="flex items-center gap-2">
       {isLoggedIn ? (
         <>
-          <Link id="dashboard-link" href="/register/getallregister" className={baseBtn}>
-            Dashboard
-          </Link>
-          <Link id="cart-link" href="/cart" className={baseBtn}>
-            Cart
-          </Link>
-          <Link id="teams-link" href="/teams" className={baseBtn}>
-            Teams
-          </Link>
-          <Link id="invites-link" href="/invites" className={baseBtn}>
-            Invites
-          </Link>
-          <Link id="orders-link" href="/orders" className={baseBtn}>
-            Orders
-          </Link>
+          {isAdmin ? (
+            // Admin: only Dashboard (payments) + Logout
+            <>
+              <Link id="dashboard-link" href="/admin" className={baseBtn}>
+                Dashboard
+              </Link>
+            </>
+          ) : (
+            // Participant: full nav
+            <>
+              <Link id="dashboard-link" href="/register/getallregister" className={baseBtn}>
+                Dashboard
+              </Link>
+              <Link id="cart-link" href="/cart" className={baseBtn}>
+                Cart
+              </Link>
+              <Link id="teams-link" href="/teams" className={baseBtn}>
+                Teams
+              </Link>
+              <Link id="invites-link" href="/invites" className={baseBtn}>
+                Invites
+              </Link>
+              <Link id="orders-link" href="/orders" className={baseBtn}>
+                Orders
+              </Link>
+            </>
+          )}
           <Link id="logout-link" href="/auth/logout" className={primaryBtn}>
             Logout
           </Link>

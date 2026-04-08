@@ -129,6 +129,7 @@ export async function POST(req: NextRequest) {
       {
         success: true,
         data: {
+          message: "Registration completed successfully.",
           user: {
             id: user.id,
             name: user.name,

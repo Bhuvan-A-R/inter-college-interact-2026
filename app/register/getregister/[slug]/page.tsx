@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import Image from "next/image";
 import React, { useEffect, useState } from "react";
+import { getImageUrl } from "@/lib/utils";
 
 // Define types for the student data
 interface Event {
@@ -131,7 +132,7 @@ export default function GetRegistrant({
               {/* Profile Picture */}
               {studentData?.photoUrl ? (
                 <Image
-                  src={`https://${process.env.NEXT_PUBLIC_UPLOADTHING_APP_ID}.ufs.sh/f/${studentData.photoUrl}`}
+                  src={getImageUrl(studentData.photoUrl)}
                   alt="Profile"
                   width={500}
                   height={500}
@@ -215,7 +216,7 @@ export default function GetRegistrant({
             <div className="grid grid-cols-2 gap-3 p-5">
               {/* Render document links if you have them */}
               <a
-                href={`https://${process.env.NEXT_PUBLIC_UPLOADTHING_APP_ID}.ufs.sh/f/${studentData?.idcardUrl}`}
+                href={getImageUrl(studentData?.idcardUrl)}
                 className="bg-gray-100 p-3 rounded-lg flex items-center space-x-2 hover:bg-gray-200"
                 target="_blank"
                 rel="noopener noreferrer"

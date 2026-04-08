@@ -44,6 +44,7 @@ import {
 } from "lucide-react";
 import { LoadingButton } from "@/components/LoadingButton";
 import Image from "next/image";
+import { getImageUrl } from "@/lib/utils";
 // Define interfaces for our data structures
 
 interface Registrant {
@@ -549,7 +550,7 @@ const UpdateRegister: React.FC<UpdateRegisterProps> = ({ params }) => {
                     {field && (
                       <>
                         <a
-                          href={`https://${process.env.NEXT_PUBLIC_UPLOADTHING_APP_ID}.ufs.sh/f/${fileUrl}`}
+                          href={getImageUrl(fileUrl)}
                           target="_blank"
                           rel="noopener noreferrer"
                         >
@@ -578,7 +579,7 @@ const UpdateRegister: React.FC<UpdateRegisterProps> = ({ params }) => {
                                   Upload Complete <VerifiedIcon />
                                 </p>
                                 <Image
-                                  src={`https://${process.env.NEXT_PUBLIC_UPLOADTHING_APP_ID}.ufs.sh/f/${fileUrl}`}
+                                  src={getImageUrl(fileUrl)}
                                   width={60}
                                   height={60}
                                   alt="uplaoded image"
