@@ -90,7 +90,7 @@ export default function CartPage() {
   const handleCheckout = async () => {
     try {
       const res = await fetch("/api/orders/checkout", { method: "POST" });
-      const data = await res.json();
+      const data: { success: boolean; data?: { orderId: string }; error?: { message?: string } } = await res.json();
 
       if (!res.ok) {
         toast.error(data.error?.message || "Checkout failed.");
@@ -98,7 +98,7 @@ export default function CartPage() {
       }
 
       toast.success("Order created. Submit payment to continue.");
-      router.push("/orders");
+      router.push(`/orders/${data.data.orderId}`);
     } catch (error) {
       console.error(error);
       toast.error("Unable to checkout.");

@@ -1,4 +1,5 @@
 import { verifySession } from "@/lib/session";
+import { getAuthSession } from "@/lib/authCookie";
 import { createUploadthing, type FileRouter } from "uploadthing/next";
 import { UploadThingError } from "uploadthing/server";
 
@@ -34,6 +35,22 @@ export const ourFileRouter = {
         .middleware(async () => {
             // No auth check: user is not logged in yet during registration
             return {};
+        })
+        .onUploadComplete(async ({ file }) => {
+            return { url: file.ufsUrl };
+        }),
+
+    // Payment screenshot — requires new cookie-based auth session
+    paymentScreenshotUploader: f({
+        image: {
+            maxFileSize: "4MB",
+            maxFileCount: 1,
+        },
+    })
+        .middleware(async () => {
+            const session = await getAuthSession();
+            if (!session?.id) throw new UploadThingError("Unauthorized");
+            return { userId: session.id };
         })
         .onUploadComplete(async ({ file }) => {
             return { url: file.ufsUrl };
