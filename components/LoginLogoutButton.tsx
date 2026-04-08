@@ -48,6 +48,18 @@ const LoginLogoutButton = () => {
           <Link id="dashboard-link" href="/register/getallregister" className={baseBtn}>
             Dashboard
           </Link>
+          <Link id="cart-link" href="/cart" className={baseBtn}>
+            Cart
+          </Link>
+          <Link id="teams-link" href="/teams" className={baseBtn}>
+            Teams
+          </Link>
+          <Link id="invites-link" href="/invites" className={baseBtn}>
+            Invites
+          </Link>
+          <Link id="orders-link" href="/orders" className={baseBtn}>
+            Orders
+          </Link>
           <Link id="logout-link" href="/auth/logout" className={primaryBtn}>
             Logout
           </Link>

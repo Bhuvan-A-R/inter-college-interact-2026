@@ -45,23 +45,6 @@ export async function POST(req: NextRequest) {
     const auth = await requireAuth();
     if (auth.error) return auth.error;
 
-    // Check profile has photoUrl (required for checkout)
-    const user = await prisma.user.findUnique({
-      where: { id: auth.session.id },
-      select: { id: true, photoUrl: true },
-    });
-
-    if (!user) {
-      return errorResponse("User not found.", 404);
-    }
-
-    if (!user.photoUrl) {
-      return errorResponse(
-        "Profile photo is required before checkout. Please update your profile.",
-        400
-      );
-    }
-
     // Get cart items
     const cartItems = await prisma.cartItem.findMany({
       where: { userId: auth.session.id },
