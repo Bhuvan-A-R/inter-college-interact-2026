@@ -1,8 +1,10 @@
 import prisma from "@/lib/db";
+import { Prisma } from "@prisma/client";
+// Then use Prisma.SomeSpecificType
+
 import { DataTable, Data } from "@/components/register/data-table";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Type } from "@prisma/client";
 import { verifySession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { PenSquare, UserPlus } from "lucide-react";

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -190,9 +191,21 @@ export default function TeamsPage() {
                       {team.event.name} • {team.event.category}
                     </p>
                   </div>
-                  <span className="text-xs font-bold uppercase tracking-widest text-gat-blue bg-gat-blue/10 px-3 py-1 rounded-full">
-                    {team.myRole}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-bold uppercase tracking-widest text-gat-blue bg-gat-blue/10 px-3 py-1 rounded-full">
+                      {team.myRole}
+                    </span>
+                    {team.myRole === "LEADER" && (
+                      <Link href={`/teams/${team.id}/manage`}>
+                        <Button
+                          variant="outline"
+                          className="text-xs h-8 px-3"
+                        >
+                          Manage
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
                 </div>
                 <div className="mt-4 text-sm text-gat-steel">
                   Leader: {team.leader.name} ({team.leader.email})
