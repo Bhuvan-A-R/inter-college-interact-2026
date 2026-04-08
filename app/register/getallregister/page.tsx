@@ -32,58 +32,47 @@ export default async function Page() {
   }
   const userIdFromSession = session.id as string;
 
-  const registrants = await prisma.registrants.findMany({
+  const user = await prisma.user.findUnique({
+    where: { id: userIdFromSession },
+    select: { id: true, name: true, usn: true },
+  });
+  if (!user) {
+    redirect("/auth/signin");
+  }
+
+  const registrations = await prisma.registration.findMany({
     where: { userId: userIdFromSession },
-    include: {
-      eventRegistrations: {
-        include: { event: true },
-      },
-    },
-    orderBy: { usn: "asc" },
+    include: { event: true },
   });
 
   // Build final rows for table
   const results: Data[] = [];
 
-  for (const registrant of registrants) {
-    const registrations = registrant.eventRegistrations.map((reg) => ({
-      type: reg.type,
-      eventName: reg.event?.eventName ?? null,
-      deptCode: reg.event?.deptCode ?? null,
-      teamNumber: reg.event?.teamNumber ?? null,
+  const participantEvents = registrations
+    .filter((r) => r.event?.name)
+    .map((r) => ({
+      eventName: r.event?.name ?? "",
+      role: "Participant" as const,
     }));
-    const hasEvents = registrations.length > 0;
-    const participantEvents = registrations
-      .filter((r) => r.type === "PARTICIPANT" && r.eventName)
-      .map((r) => ({
-        eventName: formatEventLabel(r.eventName!, r.deptCode, r.teamNumber),
-        role: "Participant" as const,
-      }));
-    const typeLabel = participantEvents.length > 0 ? "Participant" : "";
+  const typeLabel = participantEvents.length > 0 ? "Participant" : "";
 
-    // If no events or type not determined, push a blank record
-    if (!hasEvents || typeLabel === "") {
-      results.push({
-        id: registrant.id,
-        name: registrant.name,
-        usn: registrant.usn,
-        type: "",
-        events: [],
-        status: docStatusMap[registrant.docStatus],
-      });
-      continue;
-    }
-
-    // Combine events with role information
-    const combinedEvents = participantEvents;
-
+  if (typeLabel === "") {
     results.push({
-      id: `${registrant.id}#${typeLabel.toUpperCase()}`,
-      name: registrant.name,
-      usn: registrant.usn,
+      id: user.id,
+      name: user.name,
+      usn: user.usn ?? "",
+      type: "",
+      events: [],
+      status: docStatusMap.PENDING,
+    });
+  } else {
+    results.push({
+      id: `${user.id}#${typeLabel.toUpperCase()}`,
+      name: user.name,
+      usn: user.usn ?? "",
       type: typeLabel,
-      events: combinedEvents,
-      status: docStatusMap[registrant.docStatus],
+      events: participantEvents,
+      status: docStatusMap.PENDING,
     });
   }
 

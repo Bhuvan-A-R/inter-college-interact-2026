@@ -58,6 +58,16 @@ const nextConfig: NextConfig = {
             },
         ];
     },
+
+    experimental: {
+        turbo: {
+            rules: {
+                "*.md": {
+                    loaders: ["raw-loader"],
+                },
+            },
+        },
+    },
 };
 
 export default nextConfig;

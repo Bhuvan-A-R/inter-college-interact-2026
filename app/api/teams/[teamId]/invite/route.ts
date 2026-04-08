@@ -22,7 +22,8 @@ export async function POST(req: NextRequest, context: RouteContext) {
     const parsed = await parseBody(req, inviteUserSchema);
     if (parsed.error) return parsed.error;
 
-    const { email } = parsed.data;
+    const identifier =
+      "identifier" in parsed.data ? parsed.data.identifier : parsed.data.email;
 
     // Verify team exists
     const team = await prisma.team.findUnique({
@@ -51,12 +52,14 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
     // Find the invitee
     const invitee = await prisma.user.findUnique({
-      where: { email },
+      where: identifier.includes("@")
+        ? { email: identifier }
+        : { phone: identifier },
       select: { id: true, name: true, email: true },
     });
 
     if (!invitee) {
-      return errorResponse("No user found with this email.", 404);
+      return errorResponse("No user found with this identifier.", 404);
     }
 
     // Can't invite yourself

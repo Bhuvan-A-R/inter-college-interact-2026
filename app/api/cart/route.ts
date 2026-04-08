@@ -40,8 +40,12 @@ export async function GET() {
       },
       orderBy: { addedAt: "desc" },
     });
+    const subtotal = cartItems.reduce(
+      (sum, item) => sum + Number(item.event.price),
+      0
+    );
 
-    return successResponse({ cartItems });
+    return successResponse({ cartItems, subtotal });
   } catch (error) {
     console.error("[GET /api/cart]", error);
     return errorResponse("Internal server error.", 500);
@@ -78,13 +82,26 @@ export async function POST(req: NextRequest) {
       return errorResponse("Event already in cart.", 409);
     }
 
-    // If team event, verify team exists and user is a member
-    if (teamId) {
-      const teamMember = await prisma.teamMember.findFirst({
-        where: { teamId, userId: auth.session.id },
+    if (event.type === "TEAM") {
+      if (!teamId) {
+        return errorResponse("Team ID is required for team events.", 400);
+      }
+
+      const team = await prisma.team.findUnique({
+        where: { id: teamId },
+        select: { id: true, leaderId: true, eventId: true },
       });
-      if (!teamMember) {
-        return errorResponse("You are not a member of this team.", 403);
+
+      if (!team) {
+        return errorResponse("Team not found.", 404);
+      }
+
+      if (team.eventId !== eventId) {
+        return errorResponse("Team does not belong to this event.", 400);
+      }
+
+      if (team.leaderId !== auth.session.id) {
+        return errorResponse("Only the team leader can add this item.", 403);
       }
     }
 

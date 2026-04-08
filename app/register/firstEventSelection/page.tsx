@@ -25,14 +25,15 @@ export default async function Page() {
     redirect("/registrationTeamDashboard/registrationdetails");
   }
 
-  const registered: RegisteredEvent[] = await prisma.events.findMany({
-    select: { id: true, eventNo: true, eventName: true },
+  const registeredCount = await prisma.registration.count({
     where: { userId: session.id as string },
   });
 
-  if (registered.length > 0) {
+  if (registeredCount > 0) {
     redirect("/register/getallregister");
   }
+
+  const registered: RegisteredEvent[] = [];
 
   return (
     <div className="auth-shell my-20">

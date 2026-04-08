@@ -10,7 +10,6 @@ export async function GET() {
     const invites = await prisma.teamInvite.findMany({
       where: {
         invitedUserId: auth.session.id,
-        status: "PENDING",
       },
       include: {
         Team: {
@@ -52,7 +51,13 @@ export async function GET() {
       createdAt: inv.createdAt,
     }));
 
-    return successResponse({ invites: formatted });
+    const grouped = {
+      PENDING: formatted.filter((inv) => inv.status === "PENDING"),
+      ACCEPTED: formatted.filter((inv) => inv.status === "ACCEPTED"),
+      REJECTED: formatted.filter((inv) => inv.status === "REJECTED"),
+    };
+
+    return successResponse({ invites: grouped });
   } catch (error) {
     console.error("[GET /api/invites]", error);
     return errorResponse("Internal server error.", 500);

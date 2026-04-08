@@ -2,6 +2,7 @@ import "server-only";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { cache } from "react";
+import { verifyAuthToken } from "@/lib/authCookie";
 
 const secretKey = process.env.JWT_SECRET;
 const expiresIn = process.env.JWT_EXPIRE;
@@ -45,6 +46,9 @@ export async function encrypt(payload: SessionPayload) {
 }
 
 export async function decrypt(session: string | undefined = "") {
+    if (!session) {
+        return null;
+    }
     try {
         const { payload } = await jwtVerify(session, encodedKey, {
             algorithms: ["HS256"],
@@ -77,7 +81,22 @@ export async function createSession(token: SessionPayload) {
 
 export const verifySession = cache(async () => {
     // console.log("verifying session is called");
-    const cookie = (await cookies()).get("session")?.value;
+    const cookieStore = await cookies();
+    const cookie = cookieStore.get("session")?.value;
+    if (!cookie) {
+        const authToken = cookieStore.get("auth_token")?.value;
+        if (!authToken) {
+            return null;
+        }
+        const authSession = await verifyAuthToken(authToken);
+        if (!authSession?.id) {
+            return null;
+        }
+        return {
+            ...authSession,
+            paymentUrl: false,
+        } as SessionPayload;
+    }
     const session = await decrypt(cookie);
 
     if (!session?.id) {

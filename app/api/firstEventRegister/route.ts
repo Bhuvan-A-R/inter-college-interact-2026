@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { verifySession } from "@/lib/session";
+import { Prisma } from "@prisma/client";
 
 interface RegisterEvent {
     eventNo: number;
@@ -23,10 +24,6 @@ export async function PUT(request: Request) {
     const body: ReplaceRegistrationsRequest = await request.json();
     const { events } = body;
     const userId = session.id as string;
-    const user = await prisma.users.findUnique({
-        where: { id: userId },
-        select: { deptCode: true },
-    });
 
     if (!userId || !Array.isArray(events)) {
         return NextResponse.json(
@@ -37,45 +34,57 @@ export async function PUT(request: Request) {
 
     try {
         await prisma.$transaction(async (tx) => {
-            // Get existing events
-            const existingEvents = await tx.events.findMany({
-                where: { userId },
-                select: { eventNo: true },
-            });
-            const existingEventNos = new Set(
-                existingEvents.map((e) => e.eventNo)
-            );
-            const newEventNos = new Set(events.map((e) => e.eventNo));
+            // Ensure events exist in DB and collect their ids
+            const eventIds: string[] = [];
+            for (const evt of events) {
+                let event = await tx.event.findFirst({
+                    where: { name: evt.eventName, category: evt.category },
+                });
+                if (!event) {
+                    event = await tx.event.create({
+                        data: {
+                            name: evt.eventName,
+                            category: evt.category,
+                            type: evt.maxParticipant > 1 ? "TEAM" : "SOLO",
+                            price: new Prisma.Decimal(evt.amount ?? 0),
+                            minTeamSize: evt.maxParticipant > 1 ? 2 : 1,
+                            maxTeamSize: evt.maxParticipant ?? 1,
+                            isActive: true,
+                        },
+                    });
+                }
+                eventIds.push(event.id);
+            }
 
-            // Find events to delete (exist in DB but not in new list)
-            const eventNosToDelete = [...existingEventNos].filter(
-                (x) => !newEventNos.has(x)
+            const existingRegistrations = await tx.registration.findMany({
+                where: { userId },
+                select: { eventId: true },
+            });
+            const existingEventIds = new Set(
+                existingRegistrations.map((e) => e.eventId)
             );
-            if (eventNosToDelete.length > 0) {
-                await tx.events.deleteMany({
+            const newEventIds = new Set(eventIds);
+
+            const eventIdsToDelete = [...existingEventIds].filter(
+                (x) => !newEventIds.has(x)
+            );
+            if (eventIdsToDelete.length > 0) {
+                await tx.registration.deleteMany({
                     where: {
                         userId,
-                        eventNo: { in: eventNosToDelete },
+                        eventId: { in: eventIdsToDelete },
                     },
                 });
             }
 
-            // Find events to add (exist in new list but not in DB)
-            const eventsToAdd = events.filter(
-                (e) => !existingEventNos.has(e.eventNo)
+            const eventIdsToAdd = eventIds.filter(
+                (id) => !existingEventIds.has(id)
             );
-            if (eventsToAdd.length > 0) {
-                await tx.events.createMany({
-                    data: eventsToAdd.map((evt) => ({
+            if (eventIdsToAdd.length > 0) {
+                await tx.registration.createMany({
+                    data: eventIdsToAdd.map((eventId) => ({
                         userId,
-                        eventNo: evt.eventNo,
-                        eventName: evt.eventName,
-                        category: evt.category,
-                        maxParticipant: evt.maxParticipant,
-                        amount: evt.amount,
-                        registeredParticipant: 0,
-                        teamNumber: 1,
-                        deptCode: user?.deptCode ?? null,
+                        eventId,
                     })),
                     skipDuplicates: true,
                 });
