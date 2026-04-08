@@ -44,7 +44,7 @@ const protectedRoutes: string[] = [
 ];
 
 const adminRoutes: string[] = [
-    "/adminDashboard",
+    "/admin",
     "/api/admin",
 ];
 
@@ -114,8 +114,13 @@ export async function middleware(request: NextRequest) {
     const session = newSession || legacySession;
 
     // Admin-only routes
-    if (adminRoutes.some(route => path.startsWith(route)) && (!session?.id || (session?.role !== "ADMIN" && session?.role !== "SUPER_ADMIN"))) {
-        return NextResponse.redirect(new URL("/auth/signin", request.nextUrl));
+    if (adminRoutes.some(route => path.startsWith(route))) {
+        if (!session?.id) {
+            return NextResponse.redirect(new URL("/auth/signin", request.nextUrl));
+        }
+        if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
+            return NextResponse.redirect(new URL("/dashboard", request.nextUrl));
+        }
     }
 
 
@@ -140,7 +145,7 @@ export const config = {
         "/register/getallregister",
         "/register/getregister",
         "/register/updateregister",
-        "/adminDashboard",
+        "/admin/:path*",
         "/api/admin/:path*",
     ],
 };

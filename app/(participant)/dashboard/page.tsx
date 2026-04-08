@@ -51,8 +51,8 @@ export default async function Page() {
   const results: Data[] = [];
 
   const participantEvents = registrations
-    .filter((r: typeof registrations[0]) => r.event?.name)
-    .map((r: typeof registrations[0]) => ({
+    .filter((r: any) => r.event?.name)
+    .map((r: any) => ({
       eventName: r.event?.name ?? "",
       role: "Participant" as const,
     }));

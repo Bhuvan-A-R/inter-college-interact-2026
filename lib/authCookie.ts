@@ -3,10 +3,12 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { cache } from "react";
 
+// Merged and strictly typed payload
 export type AuthPayload = {
   id: string;
   email: string;
-  role: string;
+  role: "PARTICIPANT" | "ADMIN" | "SUPER_ADMIN";
+  paymentUrl?: string | boolean | null; 
 };
 
 const COOKIE_NAME = "auth_token";

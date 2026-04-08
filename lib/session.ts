@@ -102,7 +102,7 @@ export const verifySession = cache(async () => {
     if (!session?.id) {
         return null;
     }
-    return session;
+    return session as SessionPayload;
 });
 
 export async function deleteSession() {
