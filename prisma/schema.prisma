@@ -1,0 +1,280 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model PendingRegistration {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  otpCode       String
+  otpExpiresAt  DateTime
+  otpVerifiedAt DateTime?
+  attemptCount  Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastResendAt  DateTime?
+  resendCount   Int       @default(0)
+
+  @@index([otpExpiresAt])
+}
+
+model Event {
+  id            String         @id @default(uuid())
+  name          String
+  description   String?
+  type          EventType
+  category      String
+  price         Decimal        @db.Decimal(10, 2)
+  date          DateTime?
+  time          String?
+  venue         String?
+  imageUrl      String?
+  rules         String?
+  minTeamSize   Int?
+  maxTeamSize   Int?
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
+  registrations Registration[]
+  teams         Team[]
+
+  @@index([category])
+  @@index([isActive])
+  @@index([type])
+}
+
+model Team {
+  id         String       @id @default(uuid())
+  name       String
+  eventId    String
+  leaderId   String
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  cartItems  CartItem[]
+  OrderItem  OrderItem[]
+  event      Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  leader     User         @relation("TeamLeader", fields: [leaderId], references: [id], onDelete: Cascade)
+  TeamInvite TeamInvite[]
+  members    TeamMember[]
+
+  @@unique([leaderId, eventId])
+  @@index([eventId])
+}
+
+model TeamMember {
+  id       String   @id @default(uuid())
+  teamId   String
+  userId   String
+  role     TeamRole
+  joinedAt DateTime @default(now())
+  team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, teamId])
+  @@unique([teamId, userId])
+  @@index([userId])
+}
+
+model CartItem {
+  id      String   @id @default(uuid())
+  userId  String
+  eventId String
+  teamId  String?
+  addedAt DateTime @default(now())
+  event   Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  team    Team?    @relation(fields: [teamId], references: [id])
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+  @@index([userId])
+}
+
+model Order {
+  id                   String      @id @default(uuid())
+  userId               String
+  totalAmount          Decimal     @db.Decimal(10, 2)
+  status               OrderStatus @default(PENDING_PAYMENT)
+  upiTransactionId     String?
+  paymentScreenshotUrl String?
+  paymentSubmittedAt   DateTime?
+  verifiedAt           DateTime?
+  verifiedBy           String?
+  rejectionReason      String?
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+  user                 User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  verifier             User?       @relation("OrderVerifier", fields: [verifiedBy], references: [id])
+  orderItems           OrderItem[]
+
+  @@index([createdAt])
+  @@index([status])
+  @@index([userId])
+}
+
+model OrderItem {
+  id      String  @id @default(uuid())
+  orderId String
+  eventId String
+  teamId  String?
+  price   Decimal @db.Decimal(10, 2)
+  event   Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  Team    Team?   @relation(fields: [teamId], references: [id])
+
+  @@unique([orderId, eventId])
+}
+
+model Registration {
+  id        String   @id @default(uuid())
+  userId    String
+  eventId   String
+  teamId    String?
+  createdAt DateTime @default(now())
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+  @@index([eventId])
+}
+
+model AuditLog {
+  id         String      @id @default(uuid())
+  userId     String
+  action     AuditAction
+  entityType String
+  entityId   String
+  details    Json?
+  ipAddress  String?
+  createdAt  DateTime    @default(now())
+  User       User        @relation(fields: [userId], references: [id])
+
+  @@index([action])
+  @@index([createdAt])
+  @@index([entityType, entityId])
+  @@index([userId])
+}
+
+model Otp {
+  id        String     @id
+  userId    String
+  code      String
+  purpose   OtpPurpose
+  expiresAt DateTime
+  used      Boolean    @default(false)
+  createdAt DateTime   @default(now())
+  User      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([userId, purpose])
+}
+
+model PasswordResetToken {
+  id        String    @id
+  email     String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([email])
+  @@index([expiresAt])
+}
+
+model TeamInvite {
+  id                                  String           @id
+  teamId                              String
+  invitedUserId                       String
+  invitedById                         String
+  status                              TeamInviteStatus @default(PENDING)
+  createdAt                           DateTime         @default(now())
+  respondedAt                         DateTime?
+  User_TeamInvite_invitedByIdToUser   User             @relation("TeamInvite_invitedByIdToUser", fields: [invitedById], references: [id], onDelete: Cascade)
+  User_TeamInvite_invitedUserIdToUser User             @relation("TeamInvite_invitedUserIdToUser", fields: [invitedUserId], references: [id], onDelete: Cascade)
+  Team                                Team             @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, invitedUserId])
+  @@index([invitedUserId, status])
+}
+
+model User {
+  id                                        String         @id @default(uuid())
+  name                                      String
+  email                                     String         @unique
+  phone                                     String         @unique
+  collegeName                               String
+  photoUrl                                  String?
+  collegeIdCardUrl                          String?
+  collegeIdNumber                           String?
+  password                                  String?
+  emailVerified                             Boolean        @default(false)
+  role                                      Role           @default(PARTICIPANT)
+  createdAt                                 DateTime       @default(now())
+  updatedAt                                 DateTime       @updatedAt
+  aadharCardUrl                             String?
+  aadharNumber                              String?        @unique
+  usn                                       String?        @unique
+  AuditLog                                  AuditLog[]
+  cartItems                                 CartItem[]
+  orders                                    Order[]
+  ordersVerified                            Order[]        @relation("OrderVerifier")
+  Otp                                       Otp[]
+  registrations                             Registration[]
+  teamsLed                                  Team[]         @relation("TeamLeader")
+  TeamInvite_TeamInvite_invitedByIdToUser   TeamInvite[]   @relation("TeamInvite_invitedByIdToUser")
+  TeamInvite_TeamInvite_invitedUserIdToUser TeamInvite[]   @relation("TeamInvite_invitedUserIdToUser")
+  teamMemberships                           TeamMember[]
+
+  @@index([collegeName])
+  @@index([email])
+  @@index([phone])
+}
+
+enum EventType {
+  SOLO
+  TEAM
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAYMENT_SUBMITTED
+  VERIFIED
+  REJECTED
+}
+
+enum AuditAction {
+  EVENT_CREATED
+  EVENT_UPDATED
+  EVENT_DELETED
+  PAYMENT_VERIFIED
+  PAYMENT_REJECTED
+  USER_UPDATED
+  TEAM_UPDATED
+  ADMIN_LOGIN
+}
+
+enum OtpPurpose {
+  EMAIL_VERIFICATION
+  LOGIN
+}
+
+enum Role {
+  PARTICIPANT
+  SUPER_ADMIN
+}
+
+enum TeamInviteStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum TeamRole {
+  LEADER
+  MEMBER
+}
