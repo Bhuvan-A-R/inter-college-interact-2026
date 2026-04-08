@@ -16,19 +16,40 @@ export function PaymentDialog({ className }: PaymentDialogProps) {
   const handlePaymentValid = async () => {
     try {
       const request = await fetch("/api/paymentValidate");
-
       const data = await request.json();
-      console.log(data);
+
+      if (!request.ok) {
+        if (request.status === 401) {
+          toast.error("Please sign in to continue.");
+          router.push("/auth/signin");
+          return;
+        }
+        const message =
+          typeof data?.message === "string"
+            ? data.message
+            : "Unable to validate payment.";
+        toast.error(message);
+        return;
+      }
+
       if (data.type === "text") {
         toast.error(data.message);
-      } else if (data.message.length == 0 && data.type === "array") {
-        router.push("/register/paymentinfo");
-      } else {
+        return;
+      }
+
+      if (data.type === "array" && Array.isArray(data.message)) {
+        if (data.message.length === 0) {
+          router.push("/register/paymentinfo");
+          return;
+        }
         const events = data.message as Array<{ eventName: string }>;
         toast.error(
           `There are zero Registrations for these events : ${events.map((value) => value.eventName).join(", ")}`,
         );
+        return;
       }
+
+      toast.error("Unexpected response from payment validation.");
     } catch (error: unknown) {
       console.log(error);
       toast.error("something went wrong");
