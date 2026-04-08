@@ -42,7 +42,7 @@ export default function SignIn() {
   const router = useRouter();
   const [error, setError] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const { setIsLoggedIn } = useAuthContext();
+  const { setIsLoggedIn, checkAuth } = useAuthContext();
   const [visibility, setVisibility] = useState<boolean>(false);
 
   const form = useForm<z.infer<typeof newLoginSchema>>({
@@ -61,15 +61,16 @@ export default function SignIn() {
         password: values.password,
       });
       if (response.data.success) {
-        setIsLoggedIn(true);
+        // Populate both isLoggedIn and role in the auth context
+        await checkAuth();
         toast.success("Login successful!", {
           description: "Welcome back!",
         });
         const role = response.data.data?.user?.role;
-        if (role === "SUPER_ADMIN") {
-          router.push("/adminDashboard");
+        if (role === "SUPER_ADMIN" || role === "ADMIN") {
+          router.push("/admin");
         } else {
-          router.push("/register/firstEventSelection");
+          router.push("/dashboard");
         }
       } else {
         form.setError("email", { type: "manual", message: "Invalid credentials" });

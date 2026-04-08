@@ -38,13 +38,13 @@ type Team = {
 
 type TeamsResponse = {
   success: boolean;
-  data?: { teams: Team[] };
+  data?: { items: Team[] };
   error?: { message?: string };
 };
 
 type EventsResponse = {
   success: boolean;
-  data?: { events: EventOption[] };
+  data?: { items: EventOption[] };
   error?: { message?: string };
 };
 
@@ -86,8 +86,8 @@ export default function TeamsPage() {
         return;
       }
 
-      setTeams(teamsData.data?.teams ?? []);
-      setEvents(eventsData.data?.events ?? []);
+      setTeams(teamsData.data?.items ?? []);
+      setEvents(eventsData.data?.items ?? []);
     } catch (error) {
       console.error(error);
       toast.error("Unable to load teams.");

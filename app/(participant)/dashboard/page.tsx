@@ -1,123 +1,177 @@
 import prisma from "@/lib/db";
-import { Prisma } from "@prisma/client";
-// Then use Prisma.SomeSpecificType
-
-import { DataTable, Data } from "@/components/register/data-table";
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { verifySession } from "@/lib/session";
 import { redirect } from "next/navigation";
-import { PenSquare, UserPlus } from "lucide-react";
-import { PaymentDialog } from "@/components/getRegister/paymentDialog";
+import { getAuthSession } from "@/lib/authCookie";
+import { verifySession } from "@/lib/session";
+import { ShoppingCart, ClipboardList, CheckCircle, Mail, CalendarDays, Users } from "lucide-react";
 
-export const docStatusMap = {
-  PENDING: "Pending",
-  PROCESSING: "Processing",
-  APPROVED: "Success",
-  REJECTED: "Failed",
-} as const;
+export default async function DashboardPage() {
+  const newSession = await getAuthSession();
+  const legacySession = await verifySession();
+  const session = newSession ?? legacySession;
 
-const formatEventLabel = (
-  eventName: string,
-  deptCode?: string | null,
-  teamNumber?: number | null,
-) => {
-  const dept = deptCode ? ` ${deptCode}` : "";
-  const team = teamNumber ? ` Team ${teamNumber}` : "";
-  return `${eventName}${dept}${team}`.trim();
-};
-
-export default async function Page() {
-  const session = await verifySession();
-  if (!session) {
+  if (!session?.id) {
     redirect("/auth/signin");
   }
-  const userIdFromSession = session.id as string;
+
+  const userId = session.id as string;
 
   const user = await prisma.user.findUnique({
-    where: { id: userIdFromSession },
-    select: { id: true, name: true, usn: true },
-  });
-  if (!user) {
-    redirect("/auth/signin");
-  }
-
-  const registrations = await prisma.registration.findMany({
-    where: { userId: userIdFromSession },
-    include: { event: true },
+    where: { id: userId },
+    select: { id: true, name: true, email: true, collegeName: true },
   });
 
-  // Build final rows for table
-  const results: Data[] = [];
+  if (!user) redirect("/auth/signin");
 
-  const participantEvents = registrations
-    .filter((r: any) => r.event?.name)
-    .map((r: any) => ({
-      eventName: r.event?.name ?? "",
-      role: "Participant" as const,
-    }));
-  const typeLabel = participantEvents.length > 0 ? "Participant" : "";
+  const [cartCount, activeOrderCount, registrationCount, pendingInviteCount] =
+    await Promise.all([
+      prisma.cartItem.count({ where: { userId } }),
+      prisma.order.count({
+        where: {
+          userId,
+          status: { in: ["PENDING_PAYMENT", "PAYMENT_SUBMITTED"] },
+        },
+      }),
+      prisma.registration.count({ where: { userId } }),
+      prisma.teamInvite.count({
+        where: { invitedUserId: userId, status: "PENDING" },
+      }),
+    ]);
 
-  if (typeLabel === "") {
-    results.push({
-      id: user.id,
-      name: user.name,
-      usn: user.usn ?? "",
-      type: "",
-      events: [],
-      status: docStatusMap.PENDING,
-    });
-  } else {
-    results.push({
-      id: `${user.id}#${typeLabel.toUpperCase()}`,
-      name: user.name,
-      usn: user.usn ?? "",
-      type: typeLabel,
-      events: participantEvents,
-      status: docStatusMap.PENDING,
-    });
-  }
+  const cards = [
+    {
+      label: "Events Registered",
+      count: registrationCount,
+      href: null,
+      icon: CheckCircle,
+      color: "text-green-600",
+      bg: "bg-green-50",
+      border: "border-green-200",
+    },
+    {
+      label: "Cart Items",
+      count: cartCount,
+      href: "/cart",
+      icon: ShoppingCart,
+      color: "text-gat-blue",
+      bg: "bg-gat-blue/5",
+      border: "border-gat-blue/20",
+    },
+    {
+      label: "Active Orders",
+      count: activeOrderCount,
+      href: "/orders",
+      icon: ClipboardList,
+      color: "text-amber-600",
+      bg: "bg-amber-50",
+      border: "border-amber-200",
+    },
+    {
+      label: "Pending Invites",
+      count: pendingInviteCount,
+      href: "/invites",
+      icon: Mail,
+      color: "text-purple-600",
+      bg: "bg-purple-50",
+      border: "border-purple-200",
+    },
+  ];
 
   return (
-    <div className="auth-shell items-start pt-20">
-      <div className="relative z-10 w-full">
-        <div className="mt-4 justify-center flex flex-col gap-4">
-          <div className="max-w-4xl mx-auto p-4">
-            <h1 className="auth-title text-5xl md:text-5xl xl:text-5xl mb-6">
-              Registration List
-            </h1>
+    <div className="min-h-screen bg-gat-off-white pt-24 pb-20">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        {/* Welcome header */}
+        <div className="mb-10">
+          <p className="text-xs font-bold tracking-[0.2em] uppercase text-gat-steel mb-1">
+            Dashboard
+          </p>
+          <h1 className="text-3xl md:text-4xl font-heading font-black text-gat-midnight">
+            Welcome back, {user.name.split(" ")[0]}!
+          </h1>
+          <p className="text-sm text-gat-steel mt-1">{user.collegeName}</p>
+        </div>
+
+        {/* Summary cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+          {cards.map(({ label, count, href, icon: Icon, color, bg, border }) => {
+            const inner = (
+              <div
+                className={`rounded-xl border ${border} ${bg} p-5 flex flex-col gap-3 h-full transition-all hover:shadow-md`}
+              >
+                <div className={`w-10 h-10 rounded-lg ${bg} flex items-center justify-center border ${border}`}>
+                  <Icon className={`h-5 w-5 ${color}`} />
+                </div>
+                <div>
+                  <p className="text-3xl font-heading font-black text-gat-midnight">
+                    {count}
+                  </p>
+                  <p className="text-xs font-semibold text-gat-steel mt-0.5 uppercase tracking-widest">
+                    {label}
+                  </p>
+                </div>
+                {href && (
+                  <p className={`text-xs font-bold ${color} mt-auto`}>
+                    View →
+                  </p>
+                )}
+              </div>
+            );
+            return href ? (
+              <Link key={label} href={href} className="block">
+                {inner}
+              </Link>
+            ) : (
+              <div key={label}>{inner}</div>
+            );
+          })}
+        </div>
+
+        {/* Quick Links */}
+        <div className="bg-white rounded-xl border border-gat-blue/10 shadow-sm p-6">
+          <h2 className="text-xs font-bold tracking-[0.2em] uppercase text-gat-steel mb-4">
+            Quick Links
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Link
+              href="/events"
+              className="flex items-center gap-4 rounded-xl border border-gat-blue/20 bg-gat-blue/5 hover:bg-gat-blue/10 px-5 py-4 transition-all group"
+            >
+              <div className="w-10 h-10 rounded-lg bg-gat-blue/10 flex items-center justify-center shrink-0">
+                <CalendarDays className="h-5 w-5 text-gat-blue" />
+              </div>
+              <div>
+                <p className="font-heading font-bold text-gat-midnight group-hover:text-gat-blue transition-colors">
+                  Browse Events
+                </p>
+                <p className="text-xs text-gat-steel mt-0.5">
+                  Add events to your cart
+                </p>
+              </div>
+            </Link>
+
+            <Link
+              href="/teams"
+              className="flex items-center gap-4 rounded-xl border border-gat-blue/20 bg-gat-blue/5 hover:bg-gat-blue/10 px-5 py-4 transition-all group"
+            >
+              <div className="w-10 h-10 rounded-lg bg-gat-blue/10 flex items-center justify-center shrink-0">
+                <Users className="h-5 w-5 text-gat-blue" />
+              </div>
+              <div>
+                <p className="font-heading font-bold text-gat-midnight group-hover:text-gat-blue transition-colors">
+                  Manage Teams
+                </p>
+                <p className="text-xs text-gat-steel mt-0.5">
+                  Create or join a team
+                </p>
+              </div>
+            </Link>
           </div>
         </div>
-        <div className="flex justify-center mt-4 gap-4 mb-3 flex-wrap">
-          <Link href="/register/modifyevents">
-            <Button
-              variant="outline"
-              className="auth-button auth-button-secondary px-6"
-            >
-              <PenSquare className="mr-2 h-5 w-5" />
-              Modify Events
-            </Button>
-          </Link>
-          <Link href="/register/addRegistrant">
-            <Button
-              variant="outline"
-              className="auth-button auth-button-secondary px-6"
-            >
-              <UserPlus className="mr-2 h-5 w-5" />
-              Add Registrant
-            </Button>
-          </Link>
-        </div>
 
-        <div className="mx-auto w-full max-w-6xl auth-section p-4">
-          <DataTable data={results} />
-        </div>
-
-        <div className="flex flex-col items-center mt-8 mb-5 gap-4">
-          {/* Render PaymentDialog only once. Assume PaymentDialog uses the trigger passed via children or className. */}
-          <PaymentDialog className="auth-button px-6" />
-        </div>
       </div>
     </div>
   );
 }
+
+

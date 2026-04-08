@@ -10,6 +10,7 @@ import { useAuthContext } from "@/contexts/auth-context";
 const LoginLogoutButton = () => {
   const { isLoggedIn, role, setIsLoggedIn } = useAuthContext();
   const isAdmin = role === "SUPER_ADMIN" || role === "ADMIN";
+  const isParticipant = role === "PARTICIPANT" || (isLoggedIn && role !== null && !isAdmin);
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -47,16 +48,14 @@ const LoginLogoutButton = () => {
       {isLoggedIn ? (
         <>
           {isAdmin ? (
-            // Admin: only Dashboard (payments) + Logout
+            // SUPER_ADMIN / ADMIN: only the payment dashboard
+            <Link id="dashboard-link" href="/admin" className={baseBtn}>
+              Dashboard
+            </Link>
+          ) : isParticipant ? (
+            // PARTICIPANT (or any non-admin logged-in user): full nav
             <>
-              <Link id="dashboard-link" href="/admin" className={baseBtn}>
-                Dashboard
-              </Link>
-            </>
-          ) : (
-            // Participant: full nav
-            <>
-              <Link id="dashboard-link" href="/register/getallregister" className={baseBtn}>
+              <Link id="dashboard-link" href="/dashboard" className={baseBtn}>
                 Dashboard
               </Link>
               <Link id="cart-link" href="/cart" className={baseBtn}>
@@ -72,7 +71,7 @@ const LoginLogoutButton = () => {
                 Orders
               </Link>
             </>
-          )}
+          ) : null /* role still loading — render nothing until checkAuth resolves */}
           <Link id="logout-link" href="/auth/logout" className={primaryBtn}>
             Logout
           </Link>

@@ -1,7 +1,31 @@
 import { NextResponse, NextRequest } from "next/server";
-import { verifySession as verifyLegacySession } from "@/lib/session";
-import { verifyAuthToken } from "@/lib/authCookie";
+import { jwtVerify } from "jose";
 import { Redis } from "@upstash/redis"; // Use Upstash Redis
+
+function getJwtSecret(): Uint8Array {
+  const secret = process.env.JWT_SECRET ?? "";
+  return new TextEncoder().encode(secret);
+}
+
+async function verifyToken(
+  token: string
+): Promise<{ id: string; email: string; role: string; paymentUrl?: boolean | string | null } | null> {
+  try {
+    const { payload } = await jwtVerify(token, getJwtSecret(), {
+      algorithms: ["HS256"],
+    });
+    const p = payload as Record<string, unknown>;
+    if (typeof p.id !== "string") return null;
+    return {
+      id: p.id as string,
+      email: (p.email as string) ?? "",
+      role: (p.role as string) ?? "",
+      paymentUrl: p.paymentUrl as boolean | string | null | undefined,
+    };
+  } catch {
+    return null;
+  }
+}
 
 const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
 const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -107,10 +131,11 @@ export async function middleware(request: NextRequest) {
         );
     }
 
-    const legacySession = await verifyLegacySession();
+    const sessionToken = request.cookies.get("session")?.value;
     const authToken = request.cookies.get("auth_token")?.value;
-    const newSession = authToken ? await verifyAuthToken(authToken) : null;
-    
+    const legacySession = sessionToken ? await verifyToken(sessionToken) : null;
+    const newSession = authToken ? await verifyToken(authToken) : null;
+
     const session = newSession || legacySession;
 
     // Admin-only routes

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -25,13 +26,13 @@ type Team = {
 
 type EventsResponse = {
   success: boolean;
-  data?: { events: EventItem[] };
+  data?: { items: EventItem[] };
   error?: { message?: string };
 };
 
 type TeamsResponse = {
   success: boolean;
-  data?: { teams: Team[] };
+  data?: { items: Team[] };
   error?: { message?: string };
 };
 
@@ -97,8 +98,8 @@ export default function EventPage() {
         return;
       }
 
-      setEvents(eventsData.data?.events ?? []);
-      setTeams(teamsData.data?.teams ?? []);
+      setEvents(eventsData.data?.items ?? []);
+      setTeams(teamsData.data?.items ?? []);
     } catch (error) {
       console.error(error);
       toast.error("Unable to load events.");
@@ -235,7 +236,13 @@ export default function EventPage() {
                         </select>
                         {leaderTeams.length === 0 && (
                           <p className="text-xs text-gat-steel">
-                            Create a team first in the Teams page.
+                            No teams for this event.{" "}
+                            <Link
+                              href="/teams"
+                              className="text-gat-blue font-semibold underline hover:text-gat-midnight"
+                            >
+                              Create one →
+                            </Link>
                           </p>
                         )}
                       </div>
@@ -243,9 +250,15 @@ export default function EventPage() {
 
                     <Button
                       onClick={() => handleAddToCart(event)}
-                      className="w-full bg-gat-blue text-white hover:bg-gat-midnight"
+                      disabled={
+                        event.type === "TEAM" &&
+                        !selectedTeam[event.id]
+                      }
+                      className="w-full bg-gat-blue text-white hover:bg-gat-midnight disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Add to cart
+                      {event.type === "TEAM" && !selectedTeam[event.id]
+                        ? "Select a team first"
+                        : "Add to cart"}
                     </Button>
                   </div>
                 </div>
