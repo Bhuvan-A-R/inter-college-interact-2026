@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Users, Phone, Clock, Trophy, Share2, AlertCircle } from "lucide-react";
+import { ArrowLeft, Users, Phone, Clock, Trophy, Share2, AlertCircle, ArrowRight } from "lucide-react";
 import { EventCategory } from "@/data/eventCategories";
 import { EventList } from "@/data/eventList";
 import { motion } from "framer-motion";
@@ -61,13 +61,14 @@ export default function EventDetailClient({ category, details }: Props) {
               Register →
             </Link> */}
             <button
-                disabled
-                className="btn-gold"
-                style={{ opacity: 1, cursor: "not-allowed", pointerEvents: "none" }}
-              >
-                Contact your Department SPOC's
-                {/* <ArrowRight size={16} /> */}
-              </button>
+  onClick={() => window.location.href = '/auth/signin'}
+  className="btn-gold"
+  style={{ cursor: "pointer" }}
+>
+  Login / Register
+  <ArrowRight size={16} />
+</button>
+
           </div>
         </div>
 

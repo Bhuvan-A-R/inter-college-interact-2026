@@ -65,6 +65,13 @@ const protectedRoutes: string[] = [
     "/register/getregister",
     "/register/updateregister",
     "/api/getPaymentInfo",
+    "/cart",
+    "/checkout",
+    "/orders",
+    "/dashboard",
+    "/teams",
+    "/invites",
+    "/profile",
 ];
 
 const adminRoutes: string[] = [
@@ -149,11 +156,11 @@ export async function middleware(request: NextRequest) {
     }
 
 
-    if(protectedRoutes.includes(path) && session?.id && session?.paymentUrl){
+    if(protectedRoutes.some(r => path === r || path.startsWith(r + "/")) && session?.id && session?.paymentUrl){
         return NextResponse.redirect(new URL("/auth/countdown", request.nextUrl));
     }
     
-    if (protectedRoutes.includes(path) && !session?.id) {
+    if (protectedRoutes.some(r => path === r || path.startsWith(r + "/")) && !session?.id) {
         return NextResponse.redirect(new URL("/auth/signin", request.nextUrl));
     }
 }
@@ -170,6 +177,17 @@ export const config = {
         "/register/getallregister",
         "/register/getregister",
         "/register/updateregister",
+        "/cart",
+        "/cart/:path*",
+        "/checkout",
+        "/checkout/:path*",
+        "/orders",
+        "/orders/:path*",
+        "/dashboard",
+        "/teams",
+        "/teams/:path*",
+        "/invites",
+        "/profile",
         "/admin/:path*",
         "/api/admin/:path*",
     ],
