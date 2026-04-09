@@ -36,6 +36,7 @@ type Order = {
   createdAt: string;
   upiTransactionId?: string | null;
   paymentSubmittedAt?: string | null;
+  rejectionReason?: string | null;
   orderItems: OrderItem[];
 };
 
@@ -295,13 +296,19 @@ export default function OrderPaymentPage() {
         )}
 
         {order.status === "REJECTED" && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-5 text-center">
-            <p className="text-red-600 font-bold text-lg">
+          <div className="bg-red-50 border border-red-200 rounded-xl p-5">
+            <p className="text-red-600 font-bold text-lg text-center">
               Payment Rejected
             </p>
-            <p className="text-red-500 text-sm mt-1">
-              This order has been rejected. Please contact the organizers.
+            <p className="text-red-500 text-sm mt-1 text-center">
+              Your payment could not be verified. Please review the reason below and contact the organizers if you have questions.
             </p>
+            {order.rejectionReason && (
+              <div className="mt-4 rounded-lg border border-red-200 bg-white p-4">
+                <p className="text-xs font-bold uppercase tracking-widest text-red-400 mb-1">Reason for Rejection</p>
+                <p className="text-sm text-red-700">{order.rejectionReason}</p>
+              </div>
+            )}
           </div>
         )}
 

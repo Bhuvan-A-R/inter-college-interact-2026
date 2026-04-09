@@ -23,6 +23,7 @@ type Order = {
   status: "PENDING_PAYMENT" | "PAYMENT_SUBMITTED" | "VERIFIED" | "REJECTED";
   totalAmount: number | string;
   createdAt: string;
+  rejectionReason?: string | null;
   orderItems: OrderItem[];
 };
 
@@ -164,6 +165,14 @@ export default function OrdersPage() {
                       </div>
                     ))}
                   </div>
+
+                  {/* Rejection reason */}
+                  {order.status === "REJECTED" && order.rejectionReason && (
+                    <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+                      <p className="text-xs font-bold uppercase tracking-widest text-red-400 mb-0.5">Rejection Reason</p>
+                      <p className="text-sm text-red-700">{order.rejectionReason}</p>
+                    </div>
+                  )}
 
                   {/* Action button */}
                   <Link href={`/orders/${order.id}`}>

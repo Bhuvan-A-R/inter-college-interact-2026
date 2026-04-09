@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthContext } from "@/contexts/auth-context";
@@ -12,6 +12,46 @@ const LoginLogoutButton = () => {
   const isAdmin = role === "SUPER_ADMIN" || role === "ADMIN";
   const isParticipant = role === "PARTICIPANT" || (isLoggedIn && role !== null && !isAdmin);
   const router = useRouter();
+
+  const [cartCount, setCartCount] = useState(0);
+  const [pendingOrderCount, setPendingOrderCount] = useState(0);
+  const [pendingInviteCount, setPendingInviteCount] = useState(0);
+
+  useEffect(() => {
+    if (!isParticipant) {
+      setCartCount(0);
+      setPendingOrderCount(0);
+      setPendingInviteCount(0);
+      return;
+    }
+
+    // Fetch cart count
+    fetch("/api/cart")
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setCartCount(d.data?.items?.length ?? 0); })
+      .catch(() => {});
+
+    // Fetch pending-payment orders count
+    fetch("/api/orders")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) {
+          const count = (d.data?.items ?? []).filter(
+            (o: { status: string }) => o.status === "PENDING_PAYMENT"
+          ).length;
+          setPendingOrderCount(count);
+        }
+      })
+      .catch(() => {});
+
+    // Fetch pending invites count
+    fetch("/api/invites")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) setPendingInviteCount(d.data?.invites?.PENDING?.length ?? 0);
+      })
+      .catch(() => {});
+  }, [isParticipant]);
 
   const handleLogout = async () => {
     try {
@@ -63,17 +103,32 @@ const LoginLogoutButton = () => {
               <Link id="dashboard-link" href="/dashboard" className={baseBtn}>
                 Dashboard
               </Link>
-              <Link id="cart-link" href="/cart" className={baseBtn}>
+              <Link id="cart-link" href="/cart" className={`${baseBtn} relative`}>
                 Cart
+                {cartCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center px-1 leading-none">
+                    {cartCount > 99 ? "99+" : cartCount}
+                  </span>
+                )}
               </Link>
               <Link id="teams-link" href="/teams" className={baseBtn}>
                 Teams
               </Link>
-              <Link id="invites-link" href="/invites" className={baseBtn}>
+              <Link id="invites-link" href="/invites" className={`${baseBtn} relative`}>
                 Invites
+                {pendingInviteCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center px-1 leading-none">
+                    {pendingInviteCount > 99 ? "99+" : pendingInviteCount}
+                  </span>
+                )}
               </Link>
-              <Link id="orders-link" href="/orders" className={baseBtn}>
+              <Link id="orders-link" href="/orders" className={`${baseBtn} relative`}>
                 Orders
+                {pendingOrderCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center px-1 leading-none">
+                    {pendingOrderCount > 99 ? "99+" : pendingOrderCount}
+                  </span>
+                )}
               </Link>
             </>
           ) : null /* role still loading — render nothing until checkAuth resolves */}
