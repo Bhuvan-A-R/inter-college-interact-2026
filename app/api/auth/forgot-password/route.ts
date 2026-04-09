@@ -6,11 +6,13 @@ import { sendPasswordResetEmail } from "@/lib/email";
 
 const TOKEN_EXPIRY_MS = 15 * 60 * 1000; // 15 minutes
 
-// Always return the same response regardless of whether the email exists
-const SAFE_RESPONSE = NextResponse.json({
-  success: true,
-  data: { message: "Reset link sent if email exists." },
-});
+// Always return the same response text regardless of whether the email exists
+function safeResponse() {
+  return NextResponse.json({
+    success: true,
+    data: { message: "Reset link sent if email exists." },
+  });
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -34,7 +36,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Return same response whether or not email exists (prevents enumeration)
-    if (!user) return SAFE_RESPONSE;
+    if (!user) return safeResponse();
 
     const rawToken = randomBytes(32).toString("hex");
     const tokenHash = createHash("sha256").update(rawToken).digest("hex");
@@ -52,13 +54,15 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // Use the request's own origin so the link works in all environments
     const appUrl =
-      process.env.NEXT_PUBLIC_APP_URL ?? "https://vtufestinteract.com";
+      process.env.NEXT_PUBLIC_APP_URL ??
+      req.nextUrl.origin;
     const resetUrl = `${appUrl}/reset-password?token=${rawToken}`;
 
     await sendPasswordResetEmail(email, resetUrl);
 
-    return SAFE_RESPONSE;
+    return safeResponse();
   } catch (error) {
     console.error("[auth/forgot-password]", error);
     return NextResponse.json(
