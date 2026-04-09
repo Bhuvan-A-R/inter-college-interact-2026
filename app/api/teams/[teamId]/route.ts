@@ -38,12 +38,13 @@ export async function GET(req: NextRequest, context: RouteContext) {
           orderBy: { joinedAt: "asc" },
         },
         TeamInvite: {
-          where: { status: "PENDING" },
+          where: { status: { in: ["PENDING", "REJECTED"] } },
           select: {
             id: true,
             invitedUserId: true,
             status: true,
             createdAt: true,
+            respondedAt: true,
             User_TeamInvite_invitedUserIdToUser: {
               select: { id: true, name: true, email: true },
             },

@@ -15,11 +15,12 @@ type Member = {
   user: { id: string; name: string; email: string; collegeName: string };
 };
 
-type PendingInvite = {
+type TeamInviteRow = {
   id: string;
   invitedUserId: string;
-  status: string;
+  status: "PENDING" | "REJECTED";
   createdAt: string;
+  respondedAt: string | null;
   User_TeamInvite_invitedUserIdToUser: {
     id: string;
     name: string;
@@ -41,7 +42,7 @@ type TeamDetail = {
   };
   leader: { id: string; name: string; email: string };
   members: Member[];
-  TeamInvite: PendingInvite[];
+  TeamInvite: TeamInviteRow[];
 };
 
 type TeamResponse = {
@@ -233,6 +234,8 @@ export default function ManageTeamPage() {
         </div>
 
         {/* Invite section — leader only */}
+        {/* Invite section — leader only */}
+
         {isLeader && (
           <>
             <div className="bg-white border border-gat-blue/10 rounded-xl p-5 shadow-sm mb-6">
@@ -261,33 +264,55 @@ export default function ManageTeamPage() {
               </p>
             </div>
 
-            {/* Pending Invites */}
+            {/* Pending & Rejected Invites */}
             <div className="bg-white border border-gat-blue/10 rounded-xl p-5 shadow-sm">
               <h2 className="text-lg font-heading font-bold text-gat-midnight mb-4">
-                Pending Invites
+                Sent Invites
               </h2>
               {team.TeamInvite.length === 0 ? (
-                <p className="text-sm text-gat-steel">No pending invites.</p>
+                <p className="text-sm text-gat-steel">No invites sent yet.</p>
               ) : (
                 <div className="space-y-3">
-                  {team.TeamInvite.map((invite) => (
-                    <div
-                      key={invite.id}
-                      className="flex items-center justify-between p-3 rounded-lg border border-gat-blue/10"
-                    >
-                      <div>
-                        <p className="text-sm font-medium text-gat-midnight">
-                          {invite.User_TeamInvite_invitedUserIdToUser.name}
-                        </p>
-                        <p className="text-xs text-gat-steel">
-                          {invite.User_TeamInvite_invitedUserIdToUser.email}
-                        </p>
+                  {team.TeamInvite.map((invite) => {
+                    const isPending = invite.status === "PENDING";
+                    return (
+                      <div
+                        key={invite.id}
+                        className={`flex items-center justify-between p-3 rounded-lg border ${
+                          isPending
+                            ? "border-amber-200 bg-amber-50/40"
+                            : "border-red-200 bg-red-50/40"
+                        }`}
+                      >
+                        <div>
+                          <p className="text-sm font-medium text-gat-midnight">
+                            {invite.User_TeamInvite_invitedUserIdToUser.name}
+                          </p>
+                          <p className="text-xs text-gat-steel">
+                            {invite.User_TeamInvite_invitedUserIdToUser.email}
+                          </p>
+                          {invite.respondedAt && (
+                            <p className="text-xs text-gat-steel mt-0.5">
+                              Responded:{" "}
+                              {new Date(invite.respondedAt).toLocaleDateString(
+                                "en-IN",
+                                { dateStyle: "medium" },
+                              )}
+                            </p>
+                          )}
+                        </div>
+                        <span
+                          className={`text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full ${
+                            isPending
+                              ? "text-amber-600 bg-amber-100"
+                              : "text-red-600 bg-red-100"
+                          }`}
+                        >
+                          {invite.status}
+                        </span>
                       </div>
-                      <span className="text-xs font-bold uppercase tracking-widest text-amber-600 bg-amber-50 px-3 py-1 rounded-full">
-                        Pending
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
