@@ -33,11 +33,23 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Use consistent timing to prevent user enumeration
-    const passwordToCompare = user?.password ?? "$2b$12$invalidhashpadding000000000000000000000000000000000000";
+    if (!user) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            message: "Email isn't registered. Please create an account first.",
+            code: "EMAIL_NOT_FOUND",
+          },
+        },
+        { status: 404 }
+      );
+    }
+
+    const passwordToCompare = user.password ?? "$2b$12$invalidhashpadding000000000000000000000000000000000000";
     const passwordMatch = await bcrypt.compare(password, passwordToCompare);
 
-    if (!user || !user.password || !passwordMatch) {
+    if (!user.password || !passwordMatch) {
       return NextResponse.json(
         { success: false, error: { message: "Invalid email or password." } },
         { status: 401 }

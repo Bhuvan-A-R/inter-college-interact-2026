@@ -41,6 +41,7 @@ import MagneticButton from "@/components/ui/MagneticButton";
 export default function SignIn() {
   const router = useRouter();
   const [error, setError] = useState<string>("");
+  const [emailNotFound, setEmailNotFound] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const { setIsLoggedIn, checkAuth } = useAuthContext();
   const [visibility, setVisibility] = useState<boolean>(false);
@@ -55,6 +56,7 @@ export default function SignIn() {
 
   async function onSubmit(values: z.infer<typeof newLoginSchema>) {
     setIsLoading(true);
+    setEmailNotFound(false);
     try {
       const response = await axios.post("/api/auth/login", {
         email: values.email,
@@ -79,14 +81,24 @@ export default function SignIn() {
         setIsLoading(false);
       }
     } catch (error: unknown) {
-      if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
-        setError(error.response.data.error.message);
-        form.setError("email", { type: "manual", message: "Invalid credentials" });
-        form.setError("password", { type: "manual", message: "Invalid credentials" });
+      if (axios.isAxiosError(error)) {
+        const code = error.response?.data?.error?.code;
+        const message = error.response?.data?.error?.message;
+        if (code === "EMAIL_NOT_FOUND") {
+          setEmailNotFound(true);
+          form.setError("email", { type: "manual", message: "Email not registered" });
+        } else if (message) {
+          setError(message);
+          form.setError("email", { type: "manual", message: "Invalid credentials" });
+          form.setError("password", { type: "manual", message: "Invalid credentials" });
+        } else {
+          setError("An error occurred during login. Please try again.");
+          console.error(error);
+        }
       } else {
         setError("An error occurred during login. Please try again.");
+        console.error(error);
       }
-      console.error(error);
       setIsLoading(false);
     }
   }
@@ -320,11 +332,25 @@ export default function SignIn() {
                 />
 
                 {/* Inline error */}
-                {error && (
+                {emailNotFound ? (
+                  <div className="text-xs text-center bg-amber-400/10 border border-amber-400/30 rounded-lg px-3 py-3 space-y-1.5">
+                    <p className="text-amber-400 font-semibold">Email isn&apos;t registered.</p>
+                    <p style={{ color: "hsl(var(--muted-foreground))" }}>
+                      Don&apos;t have an account?{" "}
+                      <Link
+                        href="/auth/signup"
+                        className="font-bold underline"
+                        style={{ color: "hsl(var(--primary))" }}
+                      >
+                        Create one now →
+                      </Link>
+                    </p>
+                  </div>
+                ) : error ? (
                   <div className="text-xs text-red-400 text-center bg-red-400/5 border border-red-400/20 rounded-lg px-3 py-2">
                     {error}
                   </div>
-                )}
+                ) : null}
 
                 {/* Submit */}
                 <MagneticButton className="w-full">
