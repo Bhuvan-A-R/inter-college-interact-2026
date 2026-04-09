@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, Users, Phone, Clock, Trophy, Share2, AlertCircle, ArrowRight } from "lucide-react";
+import { ArrowLeft, Users, Phone, AlertCircle, ShoppingCart, LogIn, CheckCircle } from "lucide-react";
 import { EventCategory } from "@/data/eventCategories";
 import { EventList } from "@/data/eventList";
 import { motion } from "framer-motion";
+import { useAuthContext } from "@/contexts/auth-context";
+import { toast } from "sonner";
 
 interface Props {
   category: EventCategory;
@@ -31,10 +33,72 @@ export default function EventDetailClient({ category, details }: Props) {
   const mainDetail = hasDetails ? details[0] : null;
 
   const [activeAccordion, setActiveAccordion] = useState<string | null>("description");
+  const { isLoggedIn } = useAuthContext();
+  const [dbEventId, setDbEventId] = useState<string | null>(null);
+  const [inCart, setInCart] = useState(false);
+  const [adding, setAdding] = useState(false);
 
   const toggleAccordion = (id: string) => {
     setActiveAccordion(activeAccordion === id ? null : id);
   };
+
+  // Resolve DB event UUID from name
+  useEffect(() => {
+    fetch("/api/events")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success) {
+          const match = data.data.items.find(
+            (e: { id: string; name: string }) => e.name === category.eventName
+          );
+          if (match) setDbEventId(match.id);
+        }
+      })
+      .catch(() => {});
+  }, [category.eventName]);
+
+  // Check if already in cart when logged in
+  useEffect(() => {
+    if (!isLoggedIn || !dbEventId) { setInCart(false); return; }
+    fetch("/api/cart")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success) {
+          const found = data.data.items.some(
+            (item: { eventId: string }) => item.eventId === dbEventId
+          );
+          setInCart(found);
+        }
+      })
+      .catch(() => {});
+  }, [isLoggedIn, dbEventId]);
+
+  const handleAddToCart = useCallback(async () => {
+    if (!dbEventId) {
+      toast.error("This event is not yet open for registration.");
+      return;
+    }
+    if (inCart) return;
+    setAdding(true);
+    try {
+      const res = await fetch("/api/cart/items", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId: dbEventId }),
+      });
+      const data = await res.json();
+      if (res.ok || res.status === 409) {
+        setInCart(true);
+        toast.success(res.status === 409 ? "Already in cart!" : "Added to cart!");
+      } else {
+        toast.error(data.error?.message ?? "Failed to add to cart.");
+      }
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setAdding(false);
+    }
+  }, [dbEventId, inCart]);
 
   return (
     <div className="min-h-screen bg-gat-off-white font-body pt-24 pb-20">
@@ -238,14 +302,53 @@ export default function EventDetailClient({ category, details }: Props) {
                   )}
 
                 </div>
-                <button
-                  onClick={() => window.location.href = '/auth/signin'}
-                  className="btn-gold"
-                  style={{ cursor: "pointer" }}
-                >
-                  Login / Register
-                  <ArrowRight size={16} />
-                </button>
+
+                {/* ── Cart CTA ── */}
+                <div className="pt-2">
+                  {isLoggedIn ? (
+                    inCart ? (
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-green-50 border border-green-200 text-green-700 font-bold text-sm">
+                          <CheckCircle className="w-4 h-4" /> Added to Cart
+                        </div>
+                        <Link
+                          href="/cart"
+                          className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gat-blue text-white font-bold text-sm hover:bg-gat-midnight transition-colors"
+                        >
+                          <ShoppingCart className="w-4 h-4" /> Go to Cart →
+                        </Link>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={handleAddToCart}
+                        disabled={adding || !dbEventId}
+                        className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-sm transition-all ${
+                          adding || !dbEventId
+                            ? "bg-gat-off-white text-gat-steel/40 cursor-not-allowed border border-gat-steel/20"
+                            : "bg-gat-blue text-white hover:bg-gat-midnight"
+                        }`}
+                      >
+                        {adding ? (
+                          <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" /> Adding…</>
+                        ) : (
+                          <><ShoppingCart className="w-4 h-4" /> Add to Cart</>
+                        )}
+                      </button>
+                    )
+                  ) : (
+                    <Link
+                      href="/auth/signin"
+                      className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gat-blue text-white font-bold text-sm hover:bg-gat-midnight transition-colors"
+                    >
+                      <LogIn className="w-4 h-4" /> Sign In to Register
+                    </Link>
+                  )}
+                  {category.amount && (
+                    <p className="text-xs text-gat-steel text-center mt-2">
+                      Registration fee: <span className="font-bold text-gat-midnight">₹{category.amount}</span>
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
 

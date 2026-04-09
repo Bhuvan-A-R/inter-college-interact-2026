@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
-import { Search, Trophy, ChevronRight } from "lucide-react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
+import { Search, ChevronRight, ShoppingCart, LogIn, CheckCircle } from "lucide-react";
 import { eventCategories } from "@/data/eventCategories";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuthContext } from "@/contexts/auth-context";
+import { toast } from "sonner";
 
 // Helper to assign brand colors to categories
 const getColorForCategory = (category: string) => {
@@ -23,6 +25,78 @@ const getColorForCategory = (category: string) => {
 const EventPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>("ALL");
+  const { isLoggedIn } = useAuthContext();
+  const [dbEventMap, setDbEventMap] = useState<Map<string, string>>(new Map());
+  const [cartedIds, setCartedIds] = useState<Set<string>>(new Set());
+  const [addingId, setAddingId] = useState<string | null>(null);
+
+  // Fetch DB events for name→UUID lookup (public endpoint)
+  useEffect(() => {
+    fetch("/api/events")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success) {
+          const map = new Map<string, string>();
+          for (const e of data.data.items) {
+            map.set(e.name as string, e.id as string);
+          }
+          setDbEventMap(map);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Sync cart state when auth changes
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setCartedIds(new Set());
+      return;
+    }
+    fetch("/api/cart")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success) {
+          const ids = new Set<string>(
+            data.data.items.map((item: { eventId: string }) => item.eventId)
+          );
+          setCartedIds(ids);
+        }
+      })
+      .catch(() => {});
+  }, [isLoggedIn]);
+
+  const handleAddToCart = useCallback(
+    async (eventName: string) => {
+      const dbId = dbEventMap.get(eventName);
+      if (!dbId) {
+        toast.error("This event is not yet open for registration.");
+        return;
+      }
+      if (cartedIds.has(dbId)) return;
+      setAddingId(dbId);
+      try {
+        const res = await fetch("/api/cart/items", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ eventId: dbId }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setCartedIds((prev) => new Set([...prev, dbId]));
+          toast.success("Added to cart!");
+        } else if (res.status === 409) {
+          setCartedIds((prev) => new Set([...prev, dbId]));
+        } else {
+          toast.error(data.error?.message ?? "Failed to add to cart.");
+        }
+      } catch {
+        toast.error("Something went wrong. Please try again.");
+      } finally {
+        setAddingId(null);
+      }
+    },
+    [dbEventMap, cartedIds]
+  );
 
   // Derive unique categories
   const categories = useMemo(() => {
@@ -117,9 +191,11 @@ const EventPage = () => {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.3 }}
+                    className="flex flex-col"
                   >
-                    <Link href={`/events/${event.eventNo}`} className="block h-full">
-                      <div className="group h-full relative bg-white border border-gat-blue/10 rounded-xl overflow-hidden shadow-[0_2px_12px_rgba(27,58,139,0.04)] hover:shadow-[0_8px_32px_rgba(35,98,236,0.15)] hover:-translate-y-1 transition-all duration-300 flex flex-col">
+                    {/* Card body — navigates to event detail */}
+                    <Link href={`/events/${event.eventNo}`} className="block flex-1">
+                      <div className="group relative bg-white border border-gat-blue/10 rounded-t-xl overflow-hidden shadow-[0_2px_12px_rgba(27,58,139,0.04)] hover:shadow-[0_8px_32px_rgba(35,98,236,0.15)] transition-all duration-300 flex flex-col">
                         
                         {/* Top Color Bar */}
                         <div className={`h-[4px] w-full ${colors.bg}`} />
@@ -162,6 +238,43 @@ const EventPage = () => {
                         </div>
                       </div>
                     </Link>
+
+                    {/* Cart CTA — outside Link to avoid nested anchors */}
+                    {(() => {
+                      const dbId = dbEventMap.get(event.eventName);
+                      const inCart = !!dbId && cartedIds.has(dbId);
+                      const isAdding = !!dbId && dbId === addingId;
+                      return isLoggedIn ? (
+                        <button
+                          onClick={() => handleAddToCart(event.eventName)}
+                          disabled={inCart || isAdding || !dbId}
+                          className={`w-full py-2.5 text-sm font-bold rounded-b-xl flex items-center justify-center gap-2 border border-t-0 border-gat-blue/10 transition-all ${
+                            inCart
+                              ? "bg-green-50 text-green-700 cursor-default"
+                              : isAdding
+                              ? "bg-gat-off-white text-gat-steel cursor-wait"
+                              : !dbId
+                              ? "bg-gat-off-white text-gat-steel/40 cursor-not-allowed"
+                              : "bg-white text-gat-blue hover:bg-gat-blue hover:text-white hover:border-gat-blue"
+                          }`}
+                        >
+                          {inCart ? (
+                            <><CheckCircle className="w-4 h-4" /> Added</>
+                          ) : isAdding ? (
+                            <><span className="w-4 h-4 border-2 border-gat-steel/30 border-t-gat-blue rounded-full animate-spin inline-block" /> Adding...</>
+                          ) : (
+                            <><ShoppingCart className="w-4 h-4" /> Add to Cart</>
+                          )}
+                        </button>
+                      ) : (
+                        <Link
+                          href="/auth/signin"
+                          className="w-full py-2.5 text-sm font-bold rounded-b-xl flex items-center justify-center gap-2 border border-t-0 border-gat-blue/10 bg-white text-gat-steel hover:bg-gat-blue hover:text-white hover:border-gat-blue transition-all"
+                        >
+                          <LogIn className="w-4 h-4" /> Sign In to Register
+                        </Link>
+                      );
+                    })()}
                   </motion.div>
                 );
               })}

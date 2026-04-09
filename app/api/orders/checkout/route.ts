@@ -1,6 +1,5 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
-import { Decimal } from "@prisma/client/runtime/library";
 import { requireAuth, successResponse, errorResponse } from "@/lib/apiHelpers";
 
 // POST /api/orders/checkout — Create order from cart and clear cart
@@ -45,10 +44,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const totalAmount = cartItems.reduce(
-      (sum, item) => sum.add(item.event.price),
-      new Decimal(0)
-    );
+    const totalAmount = cartItems
+      .reduce((sum, item) => sum + Number(item.event.price), 0)
+      .toFixed(2);
 
     const order = await prisma.$transaction(async (tx) => {
       const newOrder = await tx.order.create({

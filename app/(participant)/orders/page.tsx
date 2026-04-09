@@ -188,34 +188,3 @@ export default function OrdersPage() {
   );
 }
 
-
-type OrderItem = {
-  id: string;
-  price: number | string;
-  event: {
-    id: string;
-    name: string;
-    type: "SOLO" | "TEAM";
-    category: string;
-    price: number | string;
-  };
-  Team?: {
-    id: string;
-    name: string;
-  } | null;
-};
-
-type Order = {
-  id: string;
-  status: "PENDING_PAYMENT" | "PAYMENT_SUBMITTED" | "VERIFIED" | "REJECTED";
-  totalAmount?: number | string;
-  createdAt?: string;
-  orderItems: OrderItem[];
-};
-
-type OrdersResponse = {
-  success: boolean;
-  data?: { orders: Order[] };
-  error?: { message?: string };
-};
-

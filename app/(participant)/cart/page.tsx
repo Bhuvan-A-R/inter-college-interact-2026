@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Trash2 } from "lucide-react";
+import { Trash2, ShoppingBag, PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -123,13 +123,23 @@ export default function CartPage() {
     <div className="min-h-screen bg-gat-off-white pt-24 pb-16">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-8">
-          <p className="text-xs font-bold tracking-[0.2em] uppercase text-gat-steel">
-            Cart
-          </p>
-          <h1 className="text-3xl md:text-4xl font-heading font-black text-gat-midnight">
-            Your Cart
-          </h1>
+        <div className="mb-8 flex items-end justify-between">
+          <div>
+            <p className="text-xs font-bold tracking-[0.2em] uppercase text-gat-steel">
+              Cart
+            </p>
+            <h1 className="text-3xl md:text-4xl font-heading font-black text-gat-midnight">
+              Your Cart
+            </h1>
+          </div>
+          {!loading && cartItems.length > 0 && (
+            <Link href="/events">
+              <Button variant="outline" className="flex items-center gap-2 text-gat-blue border-gat-blue/30 hover:bg-gat-blue hover:text-white">
+                <PlusCircle className="w-4 h-4" />
+                Add More Events
+              </Button>
+            </Link>
+          )}
         </div>
 
         {loading ? (
@@ -202,23 +212,32 @@ export default function CartPage() {
 
             {/* ── Order Summary ── */}
             <div className="rounded-xl bg-white border border-gat-blue/10 shadow-sm p-6">
-              <h2 className="text-base font-heading font-bold text-gat-midnight mb-4 uppercase tracking-widest text-xs text-gat-steel">
-                Order Summary
-              </h2>
+              <div className="flex items-center gap-2 mb-4">
+                <ShoppingBag className="w-4 h-4 text-gat-blue" />
+                <h2 className="text-xs font-heading font-bold text-gat-steel uppercase tracking-widest">
+                  Order Summary · {cartItems.length} event{cartItems.length !== 1 ? "s" : ""}
+                </h2>
+              </div>
 
               <div className="space-y-2 text-sm text-gat-steel divide-y divide-gat-blue/10">
                 {cartItems.map((item) => (
                   <div key={item.id} className="flex justify-between pt-2 first:pt-0">
-                    <span>{item.event.name}{item.team ? ` (${item.team.name})` : ""}</span>
+                    <span className="text-gat-charcoal">
+                      {item.event.name}
+                      {item.team ? <span className="text-gat-steel"> · {item.team.name}</span> : ""}
+                    </span>
                     <span className="font-mono">₹{Number(item.event.price).toFixed(2)}</span>
                   </div>
                 ))}
               </div>
 
               <div className="flex items-center justify-between mt-5 pt-4 border-t-2 border-gat-midnight">
-                <span className="text-sm font-bold uppercase tracking-widest text-gat-midnight">
-                  Total Amount to be Paid
-                </span>
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-widest text-gat-steel block">
+                    Total Amount to be Paid
+                  </span>
+                  <span className="text-xs text-gat-steel/60">Single payment for all {cartItems.length} event{cartItems.length !== 1 ? "s" : ""}</span>
+                </div>
                 <span className="text-2xl font-heading font-black text-gat-midnight">
                   ₹{subtotal.toFixed(2)}
                 </span>
@@ -229,11 +248,11 @@ export default function CartPage() {
                 disabled={checkingOut}
                 className="w-full mt-5 bg-gat-blue text-white hover:bg-gat-midnight text-base font-bold py-6"
               >
-                {checkingOut ? "Processing…" : "Proceed to Checkout →"}
+                {checkingOut ? "Processing…" : `Pay for All ${cartItems.length} Event${cartItems.length !== 1 ? "s" : ""} →`}
               </Button>
 
               <p className="text-xs text-gat-steel text-center mt-3">
-                You will be asked to submit a UPI payment screenshot after checkout.
+                One UPI payment covers all events. Upload your screenshot after checkout.
               </p>
             </div>
           </div>

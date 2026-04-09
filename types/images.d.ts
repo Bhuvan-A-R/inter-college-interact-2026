@@ -8,6 +8,9 @@ declare module "*.png" {
 // CSS side-effect imports
 declare module "*.css";
 
+// qrcode — no @types package available
+declare module "qrcode";
+
 declare module "*.jpg" {
   import type { StaticImageData } from "next/image";
   const content: StaticImageData;

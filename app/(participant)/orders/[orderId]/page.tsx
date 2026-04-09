@@ -1,12 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { UploadButton } from "@/utils/uploadthing";
+import QRCode from "qrcode";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type OrderItem = {
   id: string;
@@ -47,6 +55,8 @@ export default function OrderPaymentPage() {
   const [upiTransactionId, setUpiTransactionId] = useState("");
   const [screenshotUrl, setScreenshotUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState("");
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const loadOrder = async () => {
     setLoading(true);
@@ -84,6 +94,29 @@ export default function OrderPaymentPage() {
     loadOrder();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId]);
+
+  // Build UPI deeplink whenever order amount is known
+  const upiLink = useMemo(() => {
+    if (!order) return "";
+    const amount = Number(order.totalAmount || 0).toFixed(2);
+    const params = new URLSearchParams({
+      pa: "71159801@ubin",
+      pn: "Global Academy Of Technology",
+      am: amount,
+      cu: "INR",
+    });
+    return `upi://pay?${params.toString()}`;
+  }, [order]);
+
+  // Generate QR code data URL from UPI link
+  useEffect(() => {
+    if (!upiLink) return;
+    let active = true;
+    QRCode.toDataURL(upiLink, { width: 260, margin: 1 })
+      .then((url: string) => { if (active) setQrDataUrl(url); })
+      .catch(() => { if (active) setQrDataUrl(""); });
+    return () => { active = false; };
+  }, [upiLink]);
 
   const handleSubmitPayment = async () => {
     if (!upiTransactionId.trim()) {
@@ -275,28 +308,62 @@ export default function OrderPaymentPage() {
         {/* Payment form — only for PENDING_PAYMENT */}
         {order.status === "PENDING_PAYMENT" && (
           <div className="space-y-6">
-            {/* UPI QR Placeholder */}
+            {/* UPI QR + Bank Details */}
             <div className="bg-white border border-gat-blue/10 rounded-xl p-5 shadow-sm">
               <h2 className="text-lg font-heading font-bold text-gat-midnight mb-4">
                 UPI Payment
               </h2>
-              <div className="flex flex-col items-center justify-center border-2 border-dashed border-gat-blue/20 rounded-xl py-12 bg-gat-off-white">
-                <div className="w-40 h-40 bg-gat-blue/10 rounded-xl flex items-center justify-center mb-3">
-                  <span className="text-5xl">📱</span>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* QR Code */}
+                <div className="flex flex-col items-center gap-3">
+                  {qrDataUrl ? (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={qrDataUrl}
+                        alt="UPI QR code"
+                        className="rounded-xl border border-gat-blue/10"
+                        width={200}
+                        height={200}
+                      />
+                      <a
+                        href={upiLink}
+                        className="text-xs text-gat-blue hover:underline"
+                      >
+                        Open in UPI app →
+                      </a>
+                    </>
+                  ) : (
+                    <div className="w-[200px] h-[200px] rounded-xl border-2 border-dashed border-gat-blue/20 flex items-center justify-center bg-gat-off-white">
+                      <span className="text-gat-steel text-sm">Generating QR…</span>
+                    </div>
+                  )}
+                  <p className="text-xs text-gat-steel text-center">
+                    Scan &amp; pay{" "}
+                    <span className="font-bold text-gat-midnight">
+                      ₹{Number(order.totalAmount).toFixed(2)}
+                    </span>
+                  </p>
                 </div>
-                <p className="text-sm font-bold text-gat-midnight">
-                  UPI QR Code
-                </p>
-                <p className="text-xs text-gat-steel mt-1">
-                  (To Be Updated)
-                </p>
+
+                {/* Bank Details */}
+                <div className="space-y-2 text-sm">
+                  <h3 className="font-heading font-bold text-gat-midnight mb-3">Bank Details</h3>
+                  {[
+                    ["Bank Name", "Union Bank"],
+                    ["Account Holder", "Global Academy Of Technology"],
+                    ["UPI ID", "71159801@ubin"],
+                    ["Account Number", "143510100026360"],
+                    ["IFSC Code", "UBIN0814351"],
+                  ].map(([label, value]) => (
+                    <p key={label}>
+                      <span className="font-medium text-gat-charcoal">{label}: </span>
+                      <span className="text-gat-midnight font-mono">{value}</span>
+                    </p>
+                  ))}
+                </div>
               </div>
-              <p className="text-xs text-gat-steel text-center mt-3">
-                Scan the QR code with any UPI app and pay{" "}
-                <span className="font-bold text-gat-midnight">
-                  ₹{Number(order.totalAmount).toFixed(2)}
-                </span>
-              </p>
             </div>
 
             {/* Payment Submission Form */}
@@ -308,7 +375,7 @@ export default function OrderPaymentPage() {
               <div className="space-y-4">
                 <div>
                   <label className="text-sm font-medium text-gat-midnight mb-1.5 block">
-                    UPI Transaction ID
+                    UPI Transaction ID <span className="text-red-600">*</span>
                   </label>
                   <Input
                     type="text"
@@ -320,7 +387,7 @@ export default function OrderPaymentPage() {
 
                 <div>
                   <label className="text-sm font-medium text-gat-midnight mb-1.5 block">
-                    Payment Screenshot
+                    Payment Screenshot <span className="text-red-600">*</span>
                   </label>
                   {screenshotUrl ? (
                     <div className="flex items-center gap-3 p-3 rounded-lg border border-green-200 bg-green-50">
@@ -360,14 +427,60 @@ export default function OrderPaymentPage() {
                 </div>
 
                 <Button
-                  onClick={handleSubmitPayment}
-                  disabled={submitting || !upiTransactionId.trim() || !screenshotUrl}
+                  onClick={() => {
+                    if (!upiTransactionId.trim()) {
+                      toast.error("Please enter your UPI transaction ID.");
+                      return;
+                    }
+                    if (!screenshotUrl) {
+                      toast.error("Please upload your payment screenshot.");
+                      return;
+                    }
+                    setConfirmOpen(true);
+                  }}
+                  disabled={submitting}
                   className="w-full bg-gat-blue text-white hover:bg-gat-midnight"
                 >
-                  {submitting ? "Submitting..." : "Submit Payment"}
+                  Submit Payment
                 </Button>
+
+                <p className="text-sm text-red-500 text-center">
+                  Confirmation mail will be sent to your registered e-mail ID.
+                </p>
               </div>
             </div>
+
+            {/* Confirmation Dialog */}
+            <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Confirm Payment Submission</DialogTitle>
+                </DialogHeader>
+                <p>Are you sure you want to submit the payment details?</p>
+                <p className="text-red-500 text-sm">
+                  Once submitted, you cannot make changes.
+                </p>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setConfirmOpen(false)}
+                    disabled={submitting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={async () => {
+                      setConfirmOpen(false);
+                      await handleSubmitPayment();
+                    }}
+                    disabled={submitting}
+                    className="bg-gat-blue text-white hover:bg-gat-midnight"
+                  >
+                    {submitting ? "Submitting…" : "Confirm"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         )}
       </div>
