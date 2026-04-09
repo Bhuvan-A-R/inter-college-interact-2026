@@ -225,7 +225,7 @@ export default function SignIn() {
                 className="font-mono-jb text-xs font-semibold tracking-[0.2em] uppercase"
                 style={{ color: "hsl(var(--muted))" }}
               >
-                Inter-Department Event Registration Portal
+                NATIONAL LEVEL INTER-COLLEGIATE 2026
               </p>
             </div>
           </div>
