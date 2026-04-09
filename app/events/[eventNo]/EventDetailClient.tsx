@@ -236,16 +236,16 @@ export default function EventDetailClient({ category, details }: Props) {
                       )}
                     </div>
                   )}
-                  
+
                 </div>
-<button
-                    onClick={() => window.location.href = '/auth/signin'}
-                    className="btn-gold"
-                    style={{ cursor: "pointer" }}
-                  >
-                    Login / Register
-                    <ArrowRight size={16} />
-                  </button>
+                <button
+                  onClick={() => window.location.href = '/auth/signin'}
+                  className="btn-gold"
+                  style={{ cursor: "pointer" }}
+                >
+                  Login / Register
+                  <ArrowRight size={16} />
+                </button>
               </div>
             </div>
 
