@@ -5,7 +5,13 @@ import { getAuthSession } from "@/lib/authCookie";
 import { verifySession } from "@/lib/session";
 import { ShoppingCart, ClipboardList, CheckCircle, Mail, CalendarDays, Users } from "lucide-react";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string>>;
+}) {
+  const params = await searchParams;
+  const showUnauthorized = params.error === "unauthorized";
   const newSession = await getAuthSession();
   const legacySession = await verifySession();
   const session = newSession ?? legacySession;
@@ -80,6 +86,19 @@ export default async function DashboardPage() {
   return (
     <div className="min-h-screen bg-gat-off-white pt-24 pb-20">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        {/* Unauthorized access banner */}
+        {showUnauthorized && (
+          <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-5 py-4">
+            <span className="text-red-500 text-lg leading-none mt-0.5">⛔</span>
+            <div>
+              <p className="font-semibold text-red-700 text-sm">Access Denied</p>
+              <p className="text-xs text-red-600 mt-0.5">
+                You do not have permission to access that page.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Welcome header */}
         <div className="mb-10">

@@ -112,7 +112,7 @@ export default function SignUp() {
   const handleSendOtp = async (values: z.infer<typeof emailSchema>) => {
     setIsSending(true);
     try {
-      const { data } = await axios.post("/api/auth/register/send-otp", {
+      const { data } = await axios.post("/api/auth/register/start", {
         email: values.email,
       });
       if (data.success) {
@@ -143,7 +143,7 @@ export default function SignUp() {
     if (resendTimer > 0) return;
     setIsSending(true);
     try {
-      const { data } = await axios.post("/api/auth/register/send-otp", {
+      const { data } = await axios.post("/api/auth/register/start", {
         email: verifiedEmail,
       });
       if (data.success) {
@@ -164,7 +164,7 @@ export default function SignUp() {
   const handleVerifyOtp = async (values: z.infer<typeof otpSchema>) => {
     setIsVerifying(true);
     try {
-      const { data } = await axios.post("/api/auth/register/verify-otp", {
+      const { data } = await axios.post("/api/auth/register/verify", {
         email: verifiedEmail,
         otp: values.otp,
       });

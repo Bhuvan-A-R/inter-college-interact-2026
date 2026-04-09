@@ -48,10 +48,15 @@ const LoginLogoutButton = () => {
       {isLoggedIn ? (
         <>
           {isAdmin ? (
-            // SUPER_ADMIN / ADMIN: only the payment dashboard
-            <Link id="dashboard-link" href="/admin" className={baseBtn}>
-              Dashboard
-            </Link>
+            // SUPER_ADMIN / ADMIN: registered students list + payment dashboard
+            <>
+              <Link id="dashboard-link" href="/adminDashboard" className={baseBtn}>
+                Registrations
+              </Link>
+              <Link id="payments-link" href="/admin" className={baseBtn}>
+                Payments
+              </Link>
+            </>
           ) : isParticipant ? (
             // PARTICIPANT (or any non-admin logged-in user): full nav
             <>

@@ -1,12 +1,28 @@
 import prisma from "@/lib/db";
 import { DataTable, Data } from "@/components/register/admin-table";
+import { getAuthSession } from "@/lib/authCookie";
 import { verifySession } from "@/lib/session";
 import { redirect } from "next/navigation";
 
 export default async function Page() {
-  const session = await verifySession();
-  if (!session || (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN")) {
+  const newSession = await getAuthSession();
+  const legacySession = await verifySession();
+  const session = newSession ?? legacySession;
+
+  if (!session?.id) {
     redirect("/auth/signin");
+  }
+
+  // Fresh DB check — do not rely on JWT claims alone
+  const currentUser = await prisma.user.findUnique({
+    where: { id: session.id as string },
+    select: { role: true, emailVerified: true },
+  });
+
+  const isAdmin = currentUser?.role === "SUPER_ADMIN";
+
+  if (!currentUser || !isAdmin || !currentUser.emailVerified) {
+    redirect("/dashboard?error=unauthorized");
   }
 
   const users = await prisma.user.findMany({

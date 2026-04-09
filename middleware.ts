@@ -144,7 +144,7 @@ export async function middleware(request: NextRequest) {
             return NextResponse.redirect(new URL("/auth/signin", request.nextUrl));
         }
         if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
-            return NextResponse.redirect(new URL("/dashboard", request.nextUrl));
+            return NextResponse.redirect(new URL("/dashboard?error=unauthorized", request.nextUrl));
         }
     }
 

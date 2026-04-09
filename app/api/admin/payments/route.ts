@@ -2,7 +2,8 @@ import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
 import { requireAdmin, successResponse, errorResponse } from "@/lib/apiHelpers";
 
-// GET /api/admin/payments — List orders with status PAYMENT_SUBMITTED
+// GET /api/admin/payments — List orders filtered by status
+// ?status=PAYMENT_SUBMITTED (default) | VERIFIED | REJECTED
 export async function GET(req: NextRequest) {
   try {
     const auth = await requireAdmin();
@@ -13,9 +14,16 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get("limit") ?? "50");
     const skip = (page - 1) * limit;
 
+    const validStatuses = ["PAYMENT_SUBMITTED", "VERIFIED", "REJECTED"] as const;
+    type ValidStatus = (typeof validStatuses)[number];
+    const rawStatus = searchParams.get("status") ?? "PAYMENT_SUBMITTED";
+    const status: ValidStatus = (validStatuses as readonly string[]).includes(rawStatus)
+      ? (rawStatus as ValidStatus)
+      : "PAYMENT_SUBMITTED";
+
     const [orders, total] = await Promise.all([
       prisma.order.findMany({
-        where: { status: "PAYMENT_SUBMITTED" },
+        where: { status },
         include: {
           user: {
             select: {
@@ -41,7 +49,7 @@ export async function GET(req: NextRequest) {
         skip,
         take: limit,
       }),
-      prisma.order.count({ where: { status: "PAYMENT_SUBMITTED" } }),
+      prisma.order.count({ where: { status } }),
     ]);
 
     return successResponse({
