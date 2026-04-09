@@ -11,7 +11,7 @@ export default function LogoutPage() {
     useEffect(() => {
         (async () => {
             try {
-                await fetch("/api/logout", { method: "POST" });
+                await fetch("/api/auth/logout", { method: "POST" });
             } finally {
                 router.push("/auth/signin");
                 setIsLoggedIn(false);

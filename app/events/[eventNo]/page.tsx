@@ -4,15 +4,16 @@ import { eventsList } from "@/data/eventList";
 import EventDetailClient from "./EventDetailClient";
 
 interface Props {
-  params: { eventNo: string };
+  params: Promise<{ eventNo: string }>;
 }
 
 export async function generateStaticParams() {
   return eventCategories.map((e) => ({ eventNo: String(e.eventNo) }));
 }
 
-export default function EventDetailPage({ params }: Props) {
-  const eventNo = parseInt(params.eventNo, 10);
+export default async function EventDetailPage({ params }: Props) {
+  const { eventNo: eventNoStr } = await params;
+  const eventNo = parseInt(eventNoStr, 10);
   if (isNaN(eventNo)) notFound();
 
   const category = eventCategories.find((e) => e.eventNo === eventNo);

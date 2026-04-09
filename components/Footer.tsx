@@ -62,9 +62,9 @@ const Footer = () => {
               <li>
                 <Link href="/about" className="text-gat-steel hover:text-gat-gold transition-colors">About GAT</Link>
               </li>
-              <li>
+              {/* <li>
                 <Link href="/sponsors" className="text-gat-steel hover:text-gat-gold transition-colors">Sponsors</Link>
-              </li>
+              </li> */}
               <li>
                 <Link href="/gallery" className="text-gat-steel hover:text-gat-gold transition-colors">Gallery</Link>
               </li>

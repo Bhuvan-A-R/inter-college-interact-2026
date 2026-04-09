@@ -39,7 +39,7 @@ export default function EventDetailClient({ category, details }: Props) {
   return (
     <div className="min-h-screen bg-gat-off-white font-body pt-24 pb-20">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        
+
         {/* ── Top Nav row ──────────────────────────────────────────────────────── */}
         <div className="flex items-center justify-between mb-8">
           <Link
@@ -60,14 +60,14 @@ export default function EventDetailClient({ category, details }: Props) {
             >
               Register →
             </Link> */}
-            <button
+            {/* <button
   onClick={() => window.location.href = '/auth/signin'}
   className="btn-gold"
   style={{ cursor: "pointer" }}
 >
   Login / Register
   <ArrowRight size={16} />
-</button>
+</button> */}
 
           </div>
         </div>
@@ -76,7 +76,7 @@ export default function EventDetailClient({ category, details }: Props) {
         <header className="bg-white p-8 md:p-10 rounded-2xl border border-gat-blue/10 shadow-card mb-8 relative overflow-hidden">
           {/* Top accent line */}
           <div className={`absolute top-0 inset-x-0 h-1.5 ${colors.bg}`} />
-          
+
           <div className="flex flex-wrap gap-2 mb-4">
             <span className={`px-2.5 py-1 rounded-md text-xs font-heading font-bold tracking-widest uppercase bg-opacity-10 border border-opacity-20 ${colors.text} ${colors.bg.replace('bg-', 'bg-')}/10 border-${colors.split}/20`}>
               {category.category.replace(/_/g, " ")}
@@ -99,7 +99,7 @@ export default function EventDetailClient({ category, details }: Props) {
 
         {/* ── Grid Layout ────────────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
+
           {/* LEFT COLUMN: Meta & Actions */}
           {/* <div className="lg:col-span-1 space-y-6">
             
@@ -150,7 +150,7 @@ export default function EventDetailClient({ category, details }: Props) {
 
           {/* RIGHT COLUMN: Details & Accordions */}
           <div className="lg:col-span-2 space-y-6">
-            
+
             <div className="bg-white p-6 md:p-8 rounded-2xl border border-gat-blue/10 shadow-sm">
               <h2 className="text-2xl font-bold font-heading text-gat-midnight mb-6 border-b border-gat-blue/5 pb-4">
                 About This Event
@@ -158,10 +158,10 @@ export default function EventDetailClient({ category, details }: Props) {
 
               {/* Accordion Group */}
               <div className="space-y-4">
-                
+
                 {/* Description */}
                 <div className="border border-gat-steel/20 rounded-xl overflow-hidden">
-                  <button 
+                  <button
                     onClick={() => toggleAccordion("description")}
                     className="w-full flex items-center justify-between p-4 bg-gat-off-white hover:bg-gat-blue/5 transition-colors font-bold text-gat-midnight"
                   >
@@ -182,10 +182,10 @@ export default function EventDetailClient({ category, details }: Props) {
                           ))}
                         </div>
                       ) : (
-                         <div className="flex items-center gap-3 text-gat-steel">
-                           <AlertCircle className="w-5 h-5" />
-                           Detailed rules will be announced shortly.
-                         </div>
+                        <div className="flex items-center gap-3 text-gat-steel">
+                          <AlertCircle className="w-5 h-5" />
+                          Detailed rules will be announced shortly.
+                        </div>
                       )}
                     </div>
                   )}
@@ -193,7 +193,7 @@ export default function EventDetailClient({ category, details }: Props) {
 
                 {/* Coordinators */}
                 <div className="border border-gat-steel/20 rounded-xl overflow-hidden">
-                  <button 
+                  <button
                     onClick={() => toggleAccordion("coordinators")}
                     className="w-full flex items-center justify-between p-4 bg-gat-off-white hover:bg-gat-blue/5 transition-colors font-bold text-gat-midnight"
                   >
@@ -236,11 +236,19 @@ export default function EventDetailClient({ category, details }: Props) {
                       )}
                     </div>
                   )}
+                  
                 </div>
-
+<button
+                    onClick={() => window.location.href = '/auth/signin'}
+                    className="btn-gold"
+                    style={{ cursor: "pointer" }}
+                  >
+                    Login / Register
+                    <ArrowRight size={16} />
+                  </button>
               </div>
             </div>
-            
+
           </div>
         </div>
       </div>
