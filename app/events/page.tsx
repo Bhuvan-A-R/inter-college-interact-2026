@@ -27,8 +27,12 @@ const EventPage = () => {
   const [activeCategory, setActiveCategory] = useState<string>("ALL");
   const { isLoggedIn } = useAuthContext();
   const [dbEventMap, setDbEventMap] = useState<Map<string, string>>(new Map());
+  const [dbEventTypeMap, setDbEventTypeMap] = useState<Map<string, string>>(new Map());
   const [cartedIds, setCartedIds] = useState<Set<string>>(new Set());
   const [addingId, setAddingId] = useState<string | null>(null);
+  const [userTeams, setUserTeams] = useState<Array<{ id: string; name: string; eventId: string; myRole: string }>>([]);
+  const [teamModal, setTeamModal] = useState<{ dbId: string; name: string } | null>(null);
+  const [selectedTeamId, setSelectedTeamId] = useState<string>("");
 
   // Fetch DB events for name→UUID lookup (public endpoint)
   useEffect(() => {
@@ -37,10 +41,13 @@ const EventPage = () => {
       .then((data) => {
         if (data.success) {
           const map = new Map<string, string>();
+          const typeMap = new Map<string, string>();
           for (const e of data.data.items) {
             map.set(e.name as string, e.id as string);
+            typeMap.set(e.name as string, e.type as string);
           }
           setDbEventMap(map);
+          setDbEventTypeMap(typeMap);
         }
       })
       .catch(() => {});
@@ -65,20 +72,27 @@ const EventPage = () => {
       .catch(() => {});
   }, [isLoggedIn]);
 
-  const handleAddToCart = useCallback(
-    async (eventName: string) => {
-      const dbId = dbEventMap.get(eventName);
-      if (!dbId) {
-        toast.error("This event is not yet open for registration.");
-        return;
-      }
-      if (cartedIds.has(dbId)) return;
+  // Fetch user's teams when logged in
+  useEffect(() => {
+    if (!isLoggedIn) { setUserTeams([]); return; }
+    fetch("/api/teams")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success) setUserTeams(data.data.items);
+      })
+      .catch(() => {});
+  }, [isLoggedIn]);
+
+  const doAddToCart = useCallback(
+    async (dbId: string, teamId?: string) => {
       setAddingId(dbId);
       try {
+        const body: Record<string, string> = { eventId: dbId };
+        if (teamId) body.teamId = teamId;
         const res = await fetch("/api/cart/items", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ eventId: dbId }),
+          body: JSON.stringify(body),
         });
         const data = await res.json();
         if (res.ok) {
@@ -95,7 +109,26 @@ const EventPage = () => {
         setAddingId(null);
       }
     },
-    [dbEventMap, cartedIds]
+    []
+  );
+
+  const handleAddToCart = useCallback(
+    async (eventName: string) => {
+      const dbId = dbEventMap.get(eventName);
+      if (!dbId) {
+        toast.error("This event is not yet open for registration.");
+        return;
+      }
+      if (cartedIds.has(dbId)) return;
+      const eventType = dbEventTypeMap.get(eventName);
+      if (eventType === "TEAM") {
+        setSelectedTeamId("");
+        setTeamModal({ dbId, name: eventName });
+        return;
+      }
+      await doAddToCart(dbId);
+    },
+    [dbEventMap, dbEventTypeMap, cartedIds, doAddToCart]
   );
 
   // Derive unique categories
@@ -296,6 +329,73 @@ const EventPage = () => {
           </div>
         )}
       </div>
+
+      {/* ── Team Selection Modal ── */}
+      {teamModal && (() => {
+        const teamsForEvent = userTeams.filter(
+          (t) => t.eventId === teamModal.dbId && t.myRole === "LEADER"
+        );
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+            onClick={() => setTeamModal(null)}
+          >
+            <div
+              className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full mx-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="font-heading text-xl font-bold text-gat-midnight mb-1">Select Your Team</h3>
+              <p className="text-sm text-gat-steel mb-4">{teamModal.name}</p>
+              {teamsForEvent.length === 0 ? (
+                <div className="text-center py-4">
+                  <p className="text-gat-steel text-sm mb-3">
+                    You don&apos;t have a team (as leader) for this event yet.
+                  </p>
+                  <Link
+                    href="/teams"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-gat-blue text-white rounded-lg text-sm font-bold hover:bg-gat-midnight transition-colors"
+                  >
+                    Create a Team &rarr;
+                  </Link>
+                </div>
+              ) : (
+                <>
+                  <select
+                    value={selectedTeamId}
+                    onChange={(e) => setSelectedTeamId(e.target.value)}
+                    className="w-full border border-gat-steel/30 rounded-lg px-3 py-2.5 text-sm text-gat-midnight focus:outline-none focus:ring-2 focus:ring-gat-blue/30 mb-4"
+                  >
+                    <option value="">-- Choose a team --</option>
+                    {teamsForEvent.map((t) => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setTeamModal(null)}
+                      className="flex-1 py-2.5 text-sm font-bold border border-gat-steel/30 rounded-lg text-gat-steel hover:bg-gat-off-white transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!selectedTeamId) { toast.error("Please select a team."); return; }
+                        const { dbId } = teamModal;
+                        setTeamModal(null);
+                        await doAddToCart(dbId, selectedTeamId);
+                      }}
+                      disabled={!selectedTeamId}
+                      className="flex-1 py-2.5 text-sm font-bold bg-gat-blue text-white rounded-lg hover:bg-gat-midnight transition-colors disabled:bg-gat-off-white disabled:text-gat-steel/40 disabled:cursor-not-allowed"
+                    >
+                      Add to Cart
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };

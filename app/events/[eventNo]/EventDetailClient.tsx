@@ -37,6 +37,9 @@ export default function EventDetailClient({ category, details }: Props) {
   const [dbEventId, setDbEventId] = useState<string | null>(null);
   const [inCart, setInCart] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [userTeams, setUserTeams] = useState<Array<{ id: string; name: string; eventId: string; myRole: string }>>([]);
+  const [selectedTeamId, setSelectedTeamId] = useState<string>("");
+  const isTeamEvent = category.maxParticipant > 1;
 
   const toggleAccordion = (id: string) => {
     setActiveAccordion(activeAccordion === id ? null : id);
@@ -73,18 +76,35 @@ export default function EventDetailClient({ category, details }: Props) {
       .catch(() => {});
   }, [isLoggedIn, dbEventId]);
 
+  // Fetch user's teams when logged in
+  useEffect(() => {
+    if (!isLoggedIn) { setUserTeams([]); return; }
+    fetch("/api/teams")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success) setUserTeams(data.data.items);
+      })
+      .catch(() => {});
+  }, [isLoggedIn]);
+
   const handleAddToCart = useCallback(async () => {
     if (!dbEventId) {
       toast.error("This event is not yet open for registration.");
       return;
     }
     if (inCart) return;
+    if (isTeamEvent && !selectedTeamId) {
+      toast.error("Please select a team first.");
+      return;
+    }
     setAdding(true);
     try {
+      const body: Record<string, string> = { eventId: dbEventId };
+      if (isTeamEvent && selectedTeamId) body.teamId = selectedTeamId;
       const res = await fetch("/api/cart/items", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ eventId: dbEventId }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (res.ok || res.status === 409) {
@@ -98,7 +118,7 @@ export default function EventDetailClient({ category, details }: Props) {
     } finally {
       setAdding(false);
     }
-  }, [dbEventId, inCart]);
+  }, [dbEventId, inCart, isTeamEvent, selectedTeamId]);
 
   return (
     <div className="min-h-screen bg-gat-off-white font-body pt-24 pb-20">
@@ -315,25 +335,57 @@ export default function EventDetailClient({ category, details }: Props) {
                           href="/cart"
                           className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gat-blue text-white font-bold text-sm hover:bg-gat-midnight transition-colors"
                         >
-                          <ShoppingCart className="w-4 h-4" /> Go to Cart →
+                          <ShoppingCart className="w-4 h-4" /> Go to Cart &rarr;
                         </Link>
                       </div>
                     ) : (
-                      <button
-                        onClick={handleAddToCart}
-                        disabled={adding || !dbEventId}
-                        className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-sm transition-all ${
-                          adding || !dbEventId
-                            ? "bg-gat-off-white text-gat-steel/40 cursor-not-allowed border border-gat-steel/20"
-                            : "bg-gat-blue text-white hover:bg-gat-midnight"
-                        }`}
-                      >
-                        {adding ? (
-                          <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" /> Adding…</>
-                        ) : (
-                          <><ShoppingCart className="w-4 h-4" /> Add to Cart</>
-                        )}
-                      </button>
+                      <div className="space-y-3">
+                        {isTeamEvent && (() => {
+                          const teamsForEvent = userTeams.filter(
+                            (t) => t.eventId === dbEventId && t.myRole === "LEADER"
+                          );
+                          return teamsForEvent.length === 0 ? (
+                            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-800">
+                              <p className="font-bold mb-1">Team event</p>
+                              <p className="text-xs">You need to create a team for this event before registering.</p>
+                              <Link href="/teams" className="inline-flex items-center gap-1 mt-2 text-xs font-bold text-gat-blue hover:underline">
+                                Create a Team &rarr;
+                              </Link>
+                            </div>
+                          ) : (
+                            <div>
+                              <label className="block text-xs font-bold text-gat-steel mb-1.5 uppercase tracking-widest">
+                                Select Your Team
+                              </label>
+                              <select
+                                value={selectedTeamId}
+                                onChange={(e) => setSelectedTeamId(e.target.value)}
+                                className="w-full border border-gat-steel/30 rounded-lg px-3 py-2.5 text-sm text-gat-midnight focus:outline-none focus:ring-2 focus:ring-gat-blue/30"
+                              >
+                                <option value="">-- Choose a team --</option>
+                                {teamsForEvent.map((t) => (
+                                  <option key={t.id} value={t.id}>{t.name}</option>
+                                ))}
+                              </select>
+                            </div>
+                          );
+                        })()}
+                        <button
+                          onClick={handleAddToCart}
+                          disabled={adding || !dbEventId || (isTeamEvent && !selectedTeamId)}
+                          className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-sm transition-all ${
+                            adding || !dbEventId || (isTeamEvent && !selectedTeamId)
+                              ? "bg-gat-off-white text-gat-steel/40 cursor-not-allowed border border-gat-steel/20"
+                              : "bg-gat-blue text-white hover:bg-gat-midnight"
+                          }`}
+                        >
+                          {adding ? (
+                            <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" /> Adding…</>
+                          ) : (
+                            <><ShoppingCart className="w-4 h-4" /> Add to Cart</>
+                          )}
+                        </button>
+                      </div>
                     )
                   ) : (
                     <Link
